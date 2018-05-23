@@ -1,11 +1,6 @@
----
-title: EJS Page
----
-<h1>EJS Page!</h1>
-
-<p>Here are some variables: <%= site.title %> | <%= page.title %></p>
-
-<h2>Projects</h2>
+{title:"About Us", id:"about"}
+!!!
+<h1>About</h1>
 
 <p>The data below is coming from a JSON file.</p>
 
@@ -14,3 +9,5 @@ title: EJS Page
     <li><a href="<%= project.url %>"><%= project.name %></a></li>
   <% }) %>
 </ul>
+
+<p>Back to <a href="<%= pages.home.url %>"><%= pages.home.title %></a></p>

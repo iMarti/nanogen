@@ -4,4 +4,7 @@
 }, {
   "name": "Another Project",
   "url": "http://example.com/p2"
+}, {
+  "name": "Last Project",
+  "url": "http://example.com/p3"
 }]

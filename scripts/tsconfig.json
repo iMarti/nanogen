@@ -1,0 +1,10 @@
+{
+    "files": [
+        "page.ts",
+        "page-builder.ts",
+        "build.ts"
+    ],
+    "compilerOptions": {
+        "lib": ["es6"]
+    }
+}
