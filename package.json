@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
+  "bin": {
+    "nanogen": "./scripts/cli.js"
+  },
   "scripts": {
     "build": "node ./scripts/build",
     "serve": "serve ./public"
@@ -10,17 +13,22 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+    "ejs": "^2.6.1",
+    "fs-extra": "^6.0.1",
+    "glob": "^7.1.2",
+    "marked": "^0.4.0",
+    "chalk": "^2.4.1",
+    "meow": "^5.0.0"
+  },
   "devDependencies": {
     "@types/ejs": "^2.6.0",
     "@types/fs-extra": "^5.0.2",
     "@types/glob": "^5.0.35",
     "@types/marked": "^0.3.0",
     "@types/node": "^10.3.1",
-    "ejs": "^2.6.1",
-    "fs-extra": "^6.0.1",
-    "glob": "^7.1.2",
-    "marked": "^0.4.0",
+    "@types/chalk": "^2.2.0",
+    "@types/meow": "^4.0.1",
     "serve": "^7.2.0",
     "standard": "^11.0.1"
   }

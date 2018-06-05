@@ -2,7 +2,8 @@
     "files": [
         "page.ts",
         "page-builder.ts",
-        "build.ts"
+        "build.ts",
+        "cli.ts"
     ],
     "compilerOptions": {
         "lib": ["es6"],

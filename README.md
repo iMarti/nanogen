@@ -38,3 +38,5 @@ The properties of `pageMetaDefault` will be assigned to each page then overriden
 ## Build the builder
 
 If you made changes to the TypeScript files in `/scripts`, type `tsc` to transpile into Javascript.
+
+Install the CLI with `npm link` on the root folder, then you can call `nanogen -h` to get available command options.
