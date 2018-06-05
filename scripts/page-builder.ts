@@ -16,7 +16,7 @@ class Build {
 	constructor(public pathname: string, public config: IConfig) {
 		this.page = new Page(pathname, this.config);
 		this.destPath = path.join(this.config.site.distPath, this.page.parsedPath.dir);
-		this.renderData = Object.assign({}, config, { page: this.page, pages: Page.pages });
+		this.renderData = { ...config, page: this.page, pages: Page.pages };
 		this.loadSource();
 		this.extractMeta();
 	}
@@ -58,7 +58,7 @@ class Build {
 		const fullPath = path.join(this.config.site.srcPath, 'layouts', this.page.layout + '.ejs');
 		let source = fse.readFileSync(fullPath, { encoding: 'utf8' });
 
-		const renderData = Object.assign({}, this.renderData, { contents: this.contents });
+		const renderData = { ...this.renderData, contents: this.contents };
 
 		this.layout = ejs.render(source, renderData, { filename: fullPath });
 
@@ -73,17 +73,26 @@ class Build {
 }
 
 function build(config: IConfig): void {
+	const startTime = process.hrtime();
+
 	// clear destination folder
 	fse.emptyDirSync(config.site.distPath);
 
 	// copy assets folder
 	fse.copy(`${config.site.srcPath}/assets`, `${config.site.distPath}/assets`);
 
+	// build the pages
 	const pathnames = glob.sync('**/*.@(ejs|md|html)', { cwd: `${config.site.srcPath}/pages` });
 	const builds = pathnames.map(pathname => new Build(pathname, config));
 	builds.forEach(build => build.page.bindParent());
 	builds.forEach(build => build.page.bindChildren());
 	builds.forEach(build => build.build());
+
+	// display build time
+	const timeDiff = process.hrtime(startTime);
+	const duration = timeDiff[0] * 1000 + timeDiff[1] / 1e6;
+	const round = (d: number) => Math.round(d * 10) / 10;
+	console.log(`Site built succesfully in ${round(duration)} ms, ${round(duration / builds.length)} ms/page`);
 }
 
 export { build, IConfig }

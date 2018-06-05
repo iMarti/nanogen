@@ -5,6 +5,7 @@
         "build.ts"
     ],
     "compilerOptions": {
-        "lib": ["es6"]
+        "lib": ["es6"],
+        "target": "es5"
     }
 }

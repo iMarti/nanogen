@@ -27,10 +27,14 @@ $ npm run build
 $ npm run serve
 ```
 
-Go to http://localhost:5000 to see the generated site.
+Go to the indicated URL in a browser to see the generated site.
 
 ## Configuration
 
 All the configurable values are in `site.config.js`.
 
 The properties of `pageMetaDefault` will be assigned to each page then overriden by meta data if present.
+
+## Build the builder
+
+If you made changes to the TypeScript files in `/scripts`, type `tsc` to transpile into Javascript.

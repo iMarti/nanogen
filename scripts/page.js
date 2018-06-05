@@ -1,5 +1,5 @@
 "use strict";
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 var path = require("path");
 /** Adds quotes to JSON keys allowing non standard JSON to be parsed */
 function fixLooseJson(looseJson) {
