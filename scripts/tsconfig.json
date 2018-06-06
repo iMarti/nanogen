@@ -2,7 +2,6 @@
     "files": [
         "page.ts",
         "page-builder.ts",
-        "build.ts",
         "cli.ts"
     ],
     "compilerOptions": {
