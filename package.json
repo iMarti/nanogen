@@ -21,7 +21,7 @@
     "chalk": "^2.4.1",
     "meow": "^5.0.0",
     "live-server": "^1.2.0",
-    "lodash.debounce": "^4.0.8"
+    "lodash": "^4.17.10"
   },
   "devDependencies": {
     "@types/ejs": "^2.6.0",
@@ -30,6 +30,8 @@
     "@types/marked": "^0.3.0",
     "@types/node": "^10.3.1",
     "@types/chalk": "^2.2.0",
-    "@types/meow": "^4.0.1"
+    "@types/meow": "^4.0.1",
+    "@types/chokidar": "^1.7.5",
+    "@types/lodash": "^4.14.109"
   }
 }

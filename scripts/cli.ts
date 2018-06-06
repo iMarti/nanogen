@@ -5,8 +5,8 @@ import chalk from 'chalk';
 import * as meow from 'meow';
 import { build, IConfig } from './page-builder';
 const liveServer = require('live-server');
-const chokidar = require('chokidar');
-const debounce = require('lodash.debounce');
+import * as chokidar from 'chokidar';
+import { debounce } from 'lodash';
 
 const cli = meow(
 	chalk`
