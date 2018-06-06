@@ -74,7 +74,6 @@ var Page = /** @class */ (function () {
             rootUrl + (this.parsedPath.dir ? this.parsedPath.dir + '/' : '') :
             path.join(rootUrl + this.parsedPath.dir, this.parsedPath.name + '.html');
     };
-    Page.pages = { all: [] };
     return Page;
 }());
 exports.Page = Page;

@@ -1,4 +1,4 @@
-{id:'home', title:"Home"}
+{id:'home', title:"Homepage"}
 !!!
 # Home
 

@@ -64,17 +64,18 @@ var Build = /** @class */ (function () {
     };
     Build.prototype.writeFile = function () {
         var destPathname = path.join(this.destPath, this.page.parsedPath.name + '.html');
-        fse.writeFile(destPathname, this.layout);
+        fse.writeFileSync(destPathname, this.layout);
         delete this.layout;
     };
     return Build;
 }());
 function build(config) {
     var startTime = process.hrtime();
+    page_1.Page.pages = { all: [] };
     // clear destination folder
     fse.emptyDirSync(config.site.distPath);
     // copy assets folder
-    fse.copy(config.site.srcPath + "/assets", config.site.distPath + "/assets");
+    fse.copySync(config.site.srcPath + "/assets", "" + config.site.distPath);
     // build the pages
     var pathnames = glob.sync('**/*.@(ejs|md|html)', { cwd: config.site.srcPath + "/pages" });
     var builds = pathnames.map(function (pathname) { return new Build(pathname, config); });

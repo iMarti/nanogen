@@ -4,6 +4,9 @@ import * as fse from 'fs-extra';
 import chalk from 'chalk';
 import * as meow from 'meow';
 import { build, IConfig } from './page-builder';
+const liveServer = require('live-server');
+const chokidar = require('chokidar');
+const debounce = require('lodash.debounce');
 
 const cli = meow(
 	chalk`
@@ -23,6 +26,11 @@ const cli = meow(
 				type: 'boolean',
 				default: false,
 				alias: 'w'
+			},
+			serve: {
+				type: 'boolean',
+				default: false,
+				alias: 's'
 			},
 			port: {
 				type: 'string',
@@ -48,8 +56,32 @@ if (!fse.existsSync(configFile))
 
 let config: IConfig = require(configFile);
 
+function watch(options: IConfig): void {
+	chokidar.watch(config.site.srcPath).on(
+		'all',
+		debounce(() => {
+			build(config);
+			console.log('Waiting for changes...');
+		}, 500)
+	);
+};
+
+function serve(config: IConfig, port: number) {
+	console.log(`Starting local server at http://localhost:${port}`);
+
+	liveServer.start({
+		port: port,
+		root: config.site.distPath,
+		open: false,
+		logLevel: 0
+	});
+}
+
+
 if (cli.flags.watch) {
-	//build.serve(configData, cli.flags);
+	watch(config);
+} else if (cli.flags.serve) {
+	serve(config, cli.flags.port);
 } else {
 	build(config);
 }

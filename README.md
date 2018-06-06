@@ -23,8 +23,9 @@ Compared to the repository it has been forked from, here are the main difference
 
 ```console
 $ npm i
-$ npm run build
-$ npm run serve
+$ npm link
+$ nanogen -w
+$ nanogen -s
 ```
 
 Go to the indicated URL in a browser to see the generated site.

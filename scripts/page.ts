@@ -23,9 +23,9 @@ function fixLooseJson(looseJson: string): string {
 }
 
 class Page implements IPage {
-	static pages: {
+	static pages: { // TODO: remove this static variable
 		all: Page[]
-	} = { all: [] };
+	};
 
 	public id?: string;
 	public title: string;

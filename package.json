@@ -19,7 +19,9 @@
     "glob": "^7.1.2",
     "marked": "^0.4.0",
     "chalk": "^2.4.1",
-    "meow": "^5.0.0"
+    "meow": "^5.0.0",
+    "live-server": "^1.2.0",
+    "lodash.debounce": "^4.0.8"
   },
   "devDependencies": {
     "@types/ejs": "^2.6.0",
