@@ -65,7 +65,7 @@ class Build {
 		delete this.contents;
 	}
 	private writeFile(): void {
-		const destPathname = path.join(this.destPath, this.page.parsedPath.name + '.html');
+		const destPathname = path.join(this.destPath, this.page.parsedPath.name + this.config.site.outputExtension);
 		fse.writeFileSync(destPathname, this.layout);
 
 		delete this.layout;

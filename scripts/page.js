@@ -21,7 +21,8 @@ function fixLooseJson(looseJson) {
 var Page = /** @class */ (function () {
     function Page(pathname, config) {
         this.parsedPath = path.parse(pathname);
-        this.url = this.buildUrl(config.site.rootUrl);
+        this.isIndex = this.parsedPath.name === config.site.indexPageName;
+        this.url = this.buildUrl(config.site.rootUrl, config.site);
         this.applyMeta(config.pageMetaDefault);
         Page.pages.all.push(this);
     }
@@ -46,9 +47,9 @@ var Page = /** @class */ (function () {
         }
     };
     Page.prototype.isParent = function (p) {
-        return p.parsedPath.name === 'index' && (this.parsedPath.name === 'index' ?
+        return p.isIndex && (this.isIndex ?
             path.resolve(p.parsedPath.dir) === path.resolve(this.parsedPath.dir, '..') :
-            this.parsedPath.name !== 'index' && p.parsedPath.dir === this.parsedPath.dir);
+            !this.isIndex && p.parsedPath.dir === this.parsedPath.dir);
     };
     Page.prototype.storeMeta = function (sMeta) {
         var meta = JSON.parse(fixLooseJson(sMeta));
@@ -69,10 +70,10 @@ var Page = /** @class */ (function () {
             }
         }
     };
-    Page.prototype.buildUrl = function (rootUrl) {
-        return this.parsedPath.name === 'index' ?
+    Page.prototype.buildUrl = function (rootUrl, siteConfig) {
+        return this.isIndex ?
             rootUrl + (this.parsedPath.dir ? this.parsedPath.dir + '/' : '') :
-            path.join(rootUrl + this.parsedPath.dir, this.parsedPath.name + '.html');
+            path.join(rootUrl + this.parsedPath.dir, this.parsedPath.name + siteConfig.outputExtension);
     };
     return Page;
 }());

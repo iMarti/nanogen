@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { IPage, IPageMeta, IConfig } from './interfaces';
+import { IPage, IPageMeta, IConfig, ISiteConfig } from './interfaces';
 
 /** Adds quotes to JSON keys allowing non standard JSON to be parsed */
 function fixLooseJson(looseJson: string): string {
@@ -23,7 +23,7 @@ function fixLooseJson(looseJson: string): string {
 }
 
 class Page implements IPage {
-	static pages: { // TODO: remove this static variable
+	static pages: {
 		all: Page[]
 	};
 
@@ -31,6 +31,7 @@ class Page implements IPage {
 	public title: string;
 	public description?: string;
 	public layout?: string;
+	public isIndex: boolean;
 
 	public parent: IPage;
 	public children: IPage[];
@@ -42,8 +43,9 @@ class Page implements IPage {
 
 	constructor(pathname: string, config: IConfig) {
 		this.parsedPath = path.parse(pathname);
+		this.isIndex = this.parsedPath.name === config.site.indexPageName;
 
-		this.url = this.buildUrl(config.site.rootUrl);
+		this.url = this.buildUrl(config.site.rootUrl, config.site);
 
 		this.applyMeta(config.pageMetaDefault);
 
@@ -72,9 +74,9 @@ class Page implements IPage {
 	}
 
 	private isParent(p: Page): boolean {
-		return p.parsedPath.name === 'index' && (this.parsedPath.name === 'index' ?
+		return p.isIndex && (this.isIndex ?
 			path.resolve(p.parsedPath.dir) === path.resolve(this.parsedPath.dir, '..') :
-			this.parsedPath.name !== 'index' && p.parsedPath.dir === this.parsedPath.dir);
+			!this.isIndex && p.parsedPath.dir === this.parsedPath.dir);
 	}
 
 	public storeMeta(sMeta: string): void {
@@ -98,10 +100,10 @@ class Page implements IPage {
 		}
 	}
 
-	private buildUrl(rootUrl: string): string {
-		return this.parsedPath.name === 'index' ?
+	private buildUrl(rootUrl: string, siteConfig: ISiteConfig): string {
+		return this.isIndex ?
 			rootUrl + (this.parsedPath.dir ? this.parsedPath.dir + '/' : '') :
-			path.join(rootUrl + this.parsedPath.dir, this.parsedPath.name + '.html');
+			path.join(rootUrl + this.parsedPath.dir, this.parsedPath.name + siteConfig.outputExtension);
 	}
 }
 

@@ -4,6 +4,7 @@ import * as fse from 'fs-extra';
 import chalk from 'chalk';
 import * as meow from 'meow';
 import { build, IConfig } from './page-builder';
+import { ISiteConfig } from './interfaces';
 const liveServer = require('live-server');
 import * as chokidar from 'chokidar';
 import { debounce } from 'lodash';
@@ -55,6 +56,14 @@ if (!fse.existsSync(configFile))
 	throw `The configuration file "${configFile}" is missing`;
 
 let config: IConfig = require(configFile);
+
+const defaultSiteConfig: ISiteConfig = {
+	rootUrl: '/',
+	metaSeparator: '!!!',
+	outputExtension: '.html',
+	indexPageName: 'index'
+};
+config.site = { ...defaultSiteConfig, ...config.site };
 
 function watch(options: IConfig): void {
 	chokidar.watch(config.site.srcPath).on(

@@ -63,7 +63,7 @@ var Build = /** @class */ (function () {
         delete this.contents;
     };
     Build.prototype.writeFile = function () {
-        var destPathname = path.join(this.destPath, this.page.parsedPath.name + '.html');
+        var destPathname = path.join(this.destPath, this.page.parsedPath.name + this.config.site.outputExtension);
         fse.writeFileSync(destPathname, this.layout);
         delete this.layout;
     };

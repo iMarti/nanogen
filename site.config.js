@@ -8,8 +8,6 @@ module.exports = {
   site: {
     srcPath: './src',
     distPath: './public',
-    rootUrl: '/',
-    metaSeparator: '!!!',
     title: 'NanoGen',
     description: 'Static Site Generator in Node.js',
     projects

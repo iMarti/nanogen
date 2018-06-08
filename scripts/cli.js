@@ -4,6 +4,14 @@ var __makeTemplateObject = (this && this.__makeTemplateObject) || function (cook
     if (Object.defineProperty) { Object.defineProperty(cooked, "raw", { value: raw }); } else { cooked.raw = raw; }
     return cooked;
 };
+var __assign = (this && this.__assign) || Object.assign || function(t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+        s = arguments[i];
+        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+            t[p] = s[p];
+    }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var path = require("path");
 var fse = require("fs-extra");
@@ -45,6 +53,13 @@ var configFile = path.resolve(cli.input.length > 0 ? cli.input[0] : 'site.config
 if (!fse.existsSync(configFile))
     throw "The configuration file \"" + configFile + "\" is missing";
 var config = require(configFile);
+var defaultSiteConfig = {
+    rootUrl: '/',
+    metaSeparator: '!!!',
+    outputExtension: '.html',
+    indexPageName: 'index'
+};
+config.site = __assign({}, defaultSiteConfig, config.site);
 function watch(options) {
     chokidar.watch(config.site.srcPath).on('all', lodash_1.debounce(function () {
         page_builder_1.build(config);
