@@ -10,7 +10,11 @@
 
 <section class="main-content">
   <%- include('../partials/breadcrumb') %>
-  <%- contents %>
+  <%- contents.body %>
+  
+  <% if (contents.excerpt) { %>
+  <div class="excerpt"><%- contents.excerpt %></div>
+  <% } %>
 
   <p>Back to <a href="<%= page.parent.url %>"><%= page.parent.title %></a></div>
 

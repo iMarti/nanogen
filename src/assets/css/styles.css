@@ -828,3 +828,9 @@ li.active {
   content: '>';
   margin-left: 6px;
 }
+
+.excerpt {
+  margin-left: 12px;
+  padding-left: 8px;
+  border-left: solid 3px #888;
+}

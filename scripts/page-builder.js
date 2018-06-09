@@ -18,42 +18,68 @@ var Build = /** @class */ (function () {
     function Build(pathname, config) {
         this.pathname = pathname;
         this.config = config;
+        this.parts = {};
+        this.contents = {};
         this.page = new page_1.Page(pathname, this.config);
         this.destPath = path.join(this.config.site.distPath, this.page.parsedPath.dir);
         this.renderData = __assign({}, config, { page: this.page, pages: page_1.Page.pages });
-        this.loadSource();
-        this.extractMeta();
+        var source = this.loadSource();
+        this.splitParts(source);
+        console.log(this.parts);
     }
     Build.prototype.loadSource = function () {
         var fullPath = path.join(this.config.site.srcPath, 'pages', this.pathname);
-        this.source = fse.readFileSync(fullPath, { encoding: 'utf8' });
+        return fse.readFileSync(fullPath, { encoding: 'utf8' });
     };
-    Build.prototype.extractMeta = function () {
-        var parts = this.source.split(this.config.site.metaSeparator);
-        if (parts.length === 2) {
-            this.page.storeMeta(parts[0]);
-            this.source = parts[1];
+    Build.prototype.splitParts = function (source) {
+        var pattern = '^' + this.config.site.metaSeparator + '([a-zA-Z_$][0-9a-zA-Z_$]*)?$';
+        var reSeparator = new RegExp(pattern, 'gm');
+        // Before the first separator we can find optional meta information or the body part
+        var match = reSeparator.exec(source);
+        if (match !== null && match.index > 0) {
+            var firstPart = source.substr(0, match.index).trim();
+            if (firstPart.length > 0) {
+                if (firstPart[0] === '{')
+                    this.page.storeMeta(firstPart);
+                else
+                    this.parts.body = firstPart;
+            }
+        }
+        if (match === null) // No separator at all means the whole content is the page body
+            this.parts.body = source;
+        else {
+            while (match !== null) {
+                var partId = match[1] || 'body';
+                // The content between previous separator and the next (or end of file) is the next part
+                var start = reSeparator.lastIndex;
+                match = reSeparator.exec(source);
+                var end = match ? match.index : undefined;
+                var part = source.substring(start, end).trim();
+                this.parts[partId] = part;
+            }
         }
     };
     Build.prototype.build = function () {
         fse.mkdirsSync(this.destPath);
-        this.buildContent();
+        this.buildContents();
         this.buildLayout();
         this.writeFile();
     };
-    Build.prototype.buildContent = function () {
+    Build.prototype.buildContents = function () {
+        for (var partId in this.parts) {
+            this.contents[partId] = this.buildContent(this.parts[partId]);
+        }
+        delete this.parts;
+    };
+    Build.prototype.buildContent = function (partSource) {
         switch (this.page.parsedPath.ext) {
             case '.ejs':
-                this.contents = ejs.render(this.source, this.renderData, { filename: this.pathname });
-                break;
+                return ejs.render(partSource, this.renderData, { filename: this.pathname });
             case '.md':
-                this.contents = marked(this.source);
-                break;
+                return marked(partSource);
             default:
-                this.contents = this.source;
-                break;
+                return partSource;
         }
-        delete this.source;
     };
     Build.prototype.buildLayout = function () {
         var fullPath = path.join(this.config.site.srcPath, 'layouts', this.page.layout + '.ejs');
