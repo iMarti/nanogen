@@ -25,7 +25,6 @@ var Build = /** @class */ (function () {
         this.renderData = __assign({}, config, { page: this.page, pages: page_1.Page.pages });
         var source = this.loadSource();
         this.splitParts(source);
-        console.log(this.parts);
     }
     Build.prototype.loadSource = function () {
         var fullPath = path.join(this.config.site.srcPath, 'pages', this.pathname);
@@ -82,7 +81,11 @@ var Build = /** @class */ (function () {
         }
     };
     Build.prototype.buildLayout = function () {
-        var fullPath = path.join(this.config.site.srcPath, 'layouts', this.page.layout + '.ejs');
+        // The page layout is defined by order of priority on the page, its parent or on the site level.
+        var layout = this.page.layout ||
+            (this.page.parent ? this.page.parent.childLayout : undefined) ||
+            this.config.site.defaultLayout;
+        var fullPath = path.join(this.config.site.srcPath, 'layouts', layout + '.ejs');
         var source = fse.readFileSync(fullPath, { encoding: 'utf8' });
         var renderData = __assign({}, this.renderData, { contents: this.contents });
         this.layout = ejs.render(source, renderData, { filename: fullPath });

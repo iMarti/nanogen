@@ -18,7 +18,7 @@ class Build {
 		this.destPath = path.join(this.config.site.distPath, this.page.parsedPath.dir);
 		this.renderData = { ...config, page: this.page, pages: Page.pages };
 		const source = this.loadSource();
-		this.splitParts(source); console.log(this.parts);
+		this.splitParts(source);
 	}
 	private loadSource(): string {
 		const fullPath = path.join(this.config.site.srcPath, 'pages', this.pathname);
@@ -81,7 +81,13 @@ class Build {
 		}
 	}
 	private buildLayout(): void {
-		const fullPath = path.join(this.config.site.srcPath, 'layouts', this.page.layout + '.ejs');
+		// The page layout is defined by order of priority on the page, its parent or on the site level.
+		const layout =
+			this.page.layout ||
+			(this.page.parent ? this.page.parent.childLayout : undefined) ||
+			this.config.site.defaultLayout;
+
+		const fullPath = path.join(this.config.site.srcPath, 'layouts', layout + '.ejs');
 		let source = fse.readFileSync(fullPath, { encoding: 'utf8' });
 
 		const renderData = { ...this.renderData, contents: this.contents };

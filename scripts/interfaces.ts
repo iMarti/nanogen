@@ -5,6 +5,8 @@ interface IPageMeta {
 	description?: string;
 	/** Optional layout from the `/layouts/` folder for this page */
 	layout?: string;
+	/** Optional layout to apply to child pages if they don't set their own */
+	childLayout?: string;
 }
 interface ISiteConfig {
 	srcPath?: string;
@@ -17,6 +19,8 @@ interface ISiteConfig {
 	outputExtension?: string;
 	/** name of the index page of each folder (without tits extension), default is 'index' */
 	indexPageName?: string;
+	/** name of the default layout from the `/layouts/` folder */
+	defaultLayout?: string;
 };
 interface IConfig {
 	pageMetaDefault: IPageMeta;
