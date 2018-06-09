@@ -126,7 +126,7 @@ function build(config: IConfig): void {
 	const timeDiff = process.hrtime(startTime);
 	const duration = timeDiff[0] * 1000 + timeDiff[1] / 1e6;
 	const round = (d: number) => Math.round(d * 10) / 10;
-	console.log(`Site built succesfully in ${round(duration)} ms, ${round(duration / builds.length)} ms/page`);
+	console.log(`Succesfully built ${builds.length} pages in ${round(duration)} ms, ${round(duration / builds.length)} ms/page`);
 }
 
 export { build, IConfig }
