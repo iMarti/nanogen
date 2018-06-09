@@ -7,7 +7,6 @@ module.exports = {
   site: {
     srcPath: './src',
     distPath: './public',
-    defaultLayout: 'default',
     title: 'NanoGen',
     description: 'Static Site Generator in Node.js',
     projects

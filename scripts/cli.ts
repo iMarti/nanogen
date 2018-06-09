@@ -61,7 +61,8 @@ const defaultSiteConfig: ISiteConfig = {
 	rootUrl: '/',
 	metaSeparator: '!!!',
 	outputExtension: '.html',
-	indexPageName: 'index'
+	indexPageName: 'index',
+	defaultLayout: 'default'
 };
 config.site = { ...defaultSiteConfig, ...config.site };
 

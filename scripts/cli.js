@@ -57,7 +57,8 @@ var defaultSiteConfig = {
     rootUrl: '/',
     metaSeparator: '!!!',
     outputExtension: '.html',
-    indexPageName: 'index'
+    indexPageName: 'index',
+    defaultLayout: 'default'
 };
 config.site = __assign({}, defaultSiteConfig, config.site);
 function watch(options) {
