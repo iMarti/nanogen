@@ -23,15 +23,15 @@ interface ISiteConfig {
 	defaultLayout?: string;
 };
 interface ISitemapConfig {
-	/** whether to generate a sitemap, default is false */
-	generate: boolean;
-	/** The protocol + domain to be used to generate absolute URLs needed: Required. */
+	/**
+	 * The protocol + domain to be used to generate absolute URLs needed. Required.
+	 * example: https://example.com */
 	domain: string;
 }
 interface IConfig {
 	pageMetaDefault: IPageMeta;
 	site: ISiteConfig;
-	sitemap: ISitemapConfig;
+	sitemap?: ISitemapConfig;
 }
 interface IPage extends IPageMeta {
 	parent: IPage;

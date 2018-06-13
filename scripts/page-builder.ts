@@ -148,7 +148,7 @@ function build(config: IConfig): void {
 	builds.forEach(build => build.build());
 
 	// build the sitemap
-	if (config.sitemap && config.sitemap.generate)
+	if (config.sitemap)
 		buildSitemap(config, builds);
 
 	// display build time

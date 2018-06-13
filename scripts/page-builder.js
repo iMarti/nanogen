@@ -129,7 +129,7 @@ function build(config) {
     builds.forEach(function (build) { return build.page.bindChildren(); });
     builds.forEach(function (build) { return build.build(); });
     // build the sitemap
-    if (config.sitemap && config.sitemap.generate)
+    if (config.sitemap)
         buildSitemap(config, builds);
     // display build time
     var timeDiff = process.hrtime(startTime);
