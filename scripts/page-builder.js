@@ -10,6 +10,7 @@ var __assign = (this && this.__assign) || Object.assign || function(t) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var fse = require("fs-extra");
 var path = require("path");
+var urljoin = require("url-join");
 var page_1 = require("./page");
 var glob = require("glob");
 var ejs = require("ejs");
@@ -98,19 +99,38 @@ var Build = /** @class */ (function () {
     };
     return Build;
 }());
+function buildSitemap(config, builds) {
+    var tags = builds.map(function (build) {
+        var url = urljoin(config.sitemap.domain, build.page.url);
+        var escaped = url
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+        var tag = "<url>\n\t<loc>" + escaped + "</loc> \n</url>";
+        return tag;
+    });
+    var content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n" + tags.join('\n') + "\n</urlset>";
+    var destPathname = path.join(config.site.distPath, 'sitemap.xml');
+    fse.writeFileSync(destPathname, content);
+}
 function build(config) {
     var startTime = process.hrtime();
     page_1.Page.pages = { all: [] };
     // clear destination folder
     fse.emptyDirSync(config.site.distPath);
     // copy assets folder
-    fse.copySync(config.site.srcPath + "/assets", "" + config.site.distPath);
+    fse.copySync(config.site.srcPath + "/assets", config.site.distPath);
     // build the pages
     var pathnames = glob.sync('**/*.@(ejs|md|html)', { cwd: config.site.srcPath + "/pages" });
     var builds = pathnames.map(function (pathname) { return new Build(pathname, config); });
     builds.forEach(function (build) { return build.page.bindParent(); });
     builds.forEach(function (build) { return build.page.bindChildren(); });
     builds.forEach(function (build) { return build.build(); });
+    // build the sitemap
+    if (config.sitemap && config.sitemap.generate)
+        buildSitemap(config, builds);
     // display build time
     var timeDiff = process.hrtime(startTime);
     var duration = timeDiff[0] * 1000 + timeDiff[1] / 1e6;

@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as urljoin from 'url-join';
 import { IPage, IPageMeta, IConfig, ISiteConfig } from './interfaces';
 
 /** Adds quotes to JSON keys allowing non standard JSON to be parsed */
@@ -102,8 +103,8 @@ class Page implements IPage {
 
 	private buildUrl(rootUrl: string, siteConfig: ISiteConfig): string {
 		return this.isIndex ?
-			rootUrl + (this.parsedPath.dir ? this.parsedPath.dir + '/' : '') :
-			path.join(rootUrl + this.parsedPath.dir, this.parsedPath.name + siteConfig.outputExtension);
+			urljoin(rootUrl, (this.parsedPath.dir ? this.parsedPath.dir + '/' : '')) :
+			urljoin(rootUrl, this.parsedPath.dir, this.parsedPath.name + siteConfig.outputExtension);
 	}
 }
 

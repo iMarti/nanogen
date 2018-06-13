@@ -10,5 +10,9 @@ module.exports = {
     title: 'NanoGen',
     description: 'Static Site Generator in Node.js',
     projects
+  },
+  sitemap: {
+    generate: true,
+    domain: 'https://example.com'
   }
 }

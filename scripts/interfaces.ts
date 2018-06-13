@@ -22,9 +22,16 @@ interface ISiteConfig {
 	/** name of the default layout from the `/layouts/` folder */
 	defaultLayout?: string;
 };
+interface ISitemapConfig {
+	/** whether to generate a sitemap, default is false */
+	generate: boolean;
+	/** The protocol + domain to be used to generate absolute URLs needed: Required. */
+	domain: string;
+}
 interface IConfig {
 	pageMetaDefault: IPageMeta;
 	site: ISiteConfig;
+	sitemap: ISitemapConfig;
 }
 interface IPage extends IPageMeta {
 	parent: IPage;
@@ -35,4 +42,4 @@ interface IPage extends IPageMeta {
 	url: string;
 }
 
-export { IPage, IPageMeta, ISiteConfig, IConfig }
+export { IPage, IPageMeta, ISiteConfig, ISitemapConfig, IConfig }

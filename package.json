@@ -21,7 +21,8 @@
     "chalk": "^2.4.1",
     "meow": "^5.0.0",
     "live-server": "^1.2.0",
-    "lodash": "^4.17.10"
+    "lodash": "^4.17.10",
+    "url-join": "^4.0.0"
   },
   "devDependencies": {
     "@types/ejs": "^2.6.0",
@@ -32,6 +33,7 @@
     "@types/chalk": "^2.2.0",
     "@types/meow": "^4.0.1",
     "@types/chokidar": "^1.7.5",
-    "@types/lodash": "^4.14.109"
+    "@types/lodash": "^4.14.109",
+    "@types/url-join": "^0.8.2"
   }
 }

@@ -1,5 +1,6 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import * as urljoin from 'url-join';
 import { Page, IConfig } from './page';
 import * as glob from 'glob';
 import * as ejs from 'ejs';
@@ -104,6 +105,30 @@ class Build {
 	}
 }
 
+function buildSitemap(config: IConfig, builds: Build[]): void {
+	const tags = builds.map(build => {
+		const url = urljoin(config.sitemap.domain, build.page.url);
+		const escaped = url
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&apos;');
+		const tag = `<url>
+	<loc>${escaped}</loc> 
+</url>`;
+		return tag;
+	});
+
+	const content = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${tags.join('\n')}
+</urlset>`;
+
+	const destPathname = path.join(config.site.distPath, 'sitemap.xml');
+	fse.writeFileSync(destPathname, content);
+}
+
 function build(config: IConfig): void {
 	const startTime = process.hrtime();
 
@@ -113,7 +138,7 @@ function build(config: IConfig): void {
 	fse.emptyDirSync(config.site.distPath);
 
 	// copy assets folder
-	fse.copySync(`${config.site.srcPath}/assets`, `${config.site.distPath}`);
+	fse.copySync(`${config.site.srcPath}/assets`, config.site.distPath);
 
 	// build the pages
 	const pathnames = glob.sync('**/*.@(ejs|md|html)', { cwd: `${config.site.srcPath}/pages` });
@@ -121,6 +146,10 @@ function build(config: IConfig): void {
 	builds.forEach(build => build.page.bindParent());
 	builds.forEach(build => build.page.bindChildren());
 	builds.forEach(build => build.build());
+
+	// build the sitemap
+	if (config.sitemap && config.sitemap.generate)
+		buildSitemap(config, builds);
 
 	// display build time
 	const timeDiff = process.hrtime(startTime);

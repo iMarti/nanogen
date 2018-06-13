@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var path = require("path");
+var urljoin = require("url-join");
 /** Adds quotes to JSON keys allowing non standard JSON to be parsed */
 function fixLooseJson(looseJson) {
     // https://stackoverflow.com/a/39050609/183386
@@ -72,8 +73,8 @@ var Page = /** @class */ (function () {
     };
     Page.prototype.buildUrl = function (rootUrl, siteConfig) {
         return this.isIndex ?
-            rootUrl + (this.parsedPath.dir ? this.parsedPath.dir + '/' : '') :
-            path.join(rootUrl + this.parsedPath.dir, this.parsedPath.name + siteConfig.outputExtension);
+            urljoin(rootUrl, (this.parsedPath.dir ? this.parsedPath.dir + '/' : '')) :
+            urljoin(rootUrl, this.parsedPath.dir, this.parsedPath.name + siteConfig.outputExtension);
     };
     return Page;
 }());
