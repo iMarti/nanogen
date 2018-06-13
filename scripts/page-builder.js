@@ -135,6 +135,6 @@ function build(config) {
     var timeDiff = process.hrtime(startTime);
     var duration = timeDiff[0] * 1000 + timeDiff[1] / 1e6;
     var round = function (d) { return Math.round(d * 10) / 10; };
-    console.log("Succesfully built " + builds.length + " pages in " + round(duration) + " ms, " + round(duration / builds.length) + " ms/page");
+    console.log(new Date().toLocaleString() + " Succesfully built " + builds.length + " pages in " + round(duration) + " ms, " + round(duration / builds.length) + " ms/page");
 }
 exports.build = build;
