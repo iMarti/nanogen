@@ -142,8 +142,10 @@ function build(config: IConfig): void {
 
 	// build the pages
 	const pathnames = glob.sync('**/*.@(ejs|md|html)', { cwd: `${config.site.srcPath}/pages` });
-	const builds = pathnames.map(pathname => new Build(pathname, config));
+	let builds = pathnames.map(pathname => new Build(pathname, config));
 	builds.forEach(build => build.page.bindParent());
+	builds = builds.filter(build => build.page.isPublished());
+	builds.forEach(build => build.page.storeById());
 	builds.forEach(build => build.page.bindChildren());
 	builds.forEach(build => build.build());
 

@@ -7,6 +7,10 @@ interface IPageMeta {
 	layout?: string;
 	/** Optional layout to apply to child pages if they don't set their own */
 	childLayout?: string;
+	/** Optional flag indicating whether that page is to be published. Default: true.
+	 * All its ancestors must be published in order for this page to be actually published.
+	 */
+	publish?: boolean;
 }
 interface ISiteConfig {
 	srcPath?: string;
@@ -38,6 +42,7 @@ interface IPage extends IPageMeta {
 	children: IPage[];
 	siblings: IPage[];
 	ancestors: IPage[];
+	isPublished: () => boolean;
 
 	url: string;
 }

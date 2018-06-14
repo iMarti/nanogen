@@ -32,6 +32,7 @@ class Page implements IPage {
 	public title: string;
 	public description?: string;
 	public layout?: string;
+	public publish?: boolean;
 	public isIndex: boolean;
 
 	public parent: IPage;
@@ -83,7 +84,8 @@ class Page implements IPage {
 	public storeMeta(sMeta: string): void {
 		const meta = JSON.parse(fixLooseJson(sMeta));
 		this.applyMeta(meta);
-
+	}
+	public storeById(): void {
 		if (this.id) {
 			if (this.id in Page.pages) {
 				const other: Page = Page.pages[this.id];
@@ -99,6 +101,10 @@ class Page implements IPage {
 					this[key] = meta[key];
 			}
 		}
+	}
+	public isPublished(): boolean{
+		return this.publish !== false && // default is true
+			(!this.parent || this.parent.isPublished());
 	}
 
 	private buildUrl(rootUrl: string, siteConfig: ISiteConfig): string {

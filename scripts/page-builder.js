@@ -126,6 +126,8 @@ function build(config) {
     var pathnames = glob.sync('**/*.@(ejs|md|html)', { cwd: config.site.srcPath + "/pages" });
     var builds = pathnames.map(function (pathname) { return new Build(pathname, config); });
     builds.forEach(function (build) { return build.page.bindParent(); });
+    builds = builds.filter(function (build) { return build.page.isPublished(); });
+    builds.forEach(function (build) { return build.page.storeById(); });
     builds.forEach(function (build) { return build.page.bindChildren(); });
     builds.forEach(function (build) { return build.build(); });
     // build the sitemap

@@ -55,6 +55,8 @@ var Page = /** @class */ (function () {
     Page.prototype.storeMeta = function (sMeta) {
         var meta = JSON.parse(fixLooseJson(sMeta));
         this.applyMeta(meta);
+    };
+    Page.prototype.storeById = function () {
         if (this.id) {
             if (this.id in Page.pages) {
                 var other = Page.pages[this.id];
@@ -70,6 +72,10 @@ var Page = /** @class */ (function () {
                     this[key] = meta[key];
             }
         }
+    };
+    Page.prototype.isPublished = function () {
+        return this.publish !== false && // default is true
+            (!this.parent || this.parent.isPublished());
     };
     Page.prototype.buildUrl = function (rootUrl, siteConfig) {
         return this.isIndex ?
