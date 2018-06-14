@@ -5,6 +5,7 @@ import { Page, IConfig } from './page';
 import * as glob from 'glob';
 import * as ejs from 'ejs';
 import * as marked from 'marked';
+import { remove } from 'lodash';
 
 class Build {
 	public page: Page;
@@ -144,7 +145,12 @@ function build(config: IConfig): void {
 	const pathnames = glob.sync('**/*.@(ejs|md|html)', { cwd: `${config.site.srcPath}/pages` });
 	let builds = pathnames.map(pathname => new Build(pathname, config));
 	builds.forEach(build => build.page.bindParent());
-	builds = builds.filter(build => build.page.isPublished());
+	builds = builds.filter(build => {
+		const isPublished = build.page.isPublished();
+		if (!isPublished)
+			remove(Page.pages.all, build.page);
+		return isPublished;
+	});
 	builds.forEach(build => build.page.storeById());
 	builds.forEach(build => build.page.bindChildren());
 	builds.forEach(build => build.build());

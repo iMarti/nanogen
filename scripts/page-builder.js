@@ -15,6 +15,7 @@ var page_1 = require("./page");
 var glob = require("glob");
 var ejs = require("ejs");
 var marked = require("marked");
+var lodash_1 = require("lodash");
 var Build = /** @class */ (function () {
     function Build(pathname, config) {
         this.pathname = pathname;
@@ -126,7 +127,14 @@ function build(config) {
     var pathnames = glob.sync('**/*.@(ejs|md|html)', { cwd: config.site.srcPath + "/pages" });
     var builds = pathnames.map(function (pathname) { return new Build(pathname, config); });
     builds.forEach(function (build) { return build.page.bindParent(); });
-    builds = builds.filter(function (build) { return build.page.isPublished(); });
+    builds = builds.filter(function (build) {
+        var isPublished = build.page.isPublished();
+        if (!isPublished) {
+            console.log("removing " + build.page.title);
+            lodash_1.remove(page_1.Page.pages.all, build.page);
+        }
+        return isPublished;
+    });
     builds.forEach(function (build) { return build.page.storeById(); });
     builds.forEach(function (build) { return build.page.bindChildren(); });
     builds.forEach(function (build) { return build.build(); });
