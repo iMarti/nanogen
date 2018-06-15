@@ -73,7 +73,7 @@ var Page = /** @class */ (function () {
             }
             // By default use the file name as title
             if (!this.title)
-                this.title = this.parsedPath.name;
+                this.title = this.isIndex ? path.basename(this.parsedPath.dir) : this.parsedPath.name;
         }
     };
     Page.prototype.isPublished = function () {
