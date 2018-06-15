@@ -82,8 +82,17 @@ var Page = /** @class */ (function () {
     };
     Page.prototype.buildUrl = function (rootUrl, siteConfig) {
         return this.isIndex ?
-            urljoin(rootUrl, (this.parsedPath.dir ? this.parsedPath.dir + '/' : '')) :
+            urljoin(rootUrl, (this.parsedPath.dir ? this.parsedPath.dir : '') + '/') :
             urljoin(rootUrl, this.parsedPath.dir, this.parsedPath.name + siteConfig.outputExtension);
+    };
+    /** Generates a string representation of the page, mainly used for debug */
+    Page.prototype.toString = function () {
+        return JSON.stringify({
+            id: this.id,
+            title: this.title,
+            url: this.url,
+            parent: this.parent ? this.parent.title : null
+        });
     };
     return Page;
 }());

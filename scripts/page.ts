@@ -113,8 +113,18 @@ class Page implements IPage {
 
 	private buildUrl(rootUrl: string, siteConfig: ISiteConfig): string {
 		return this.isIndex ?
-			urljoin(rootUrl, (this.parsedPath.dir ? this.parsedPath.dir + '/' : '')) :
+			urljoin(rootUrl, (this.parsedPath.dir ? this.parsedPath.dir : '') + '/') :
 			urljoin(rootUrl, this.parsedPath.dir, this.parsedPath.name + siteConfig.outputExtension);
+	}
+
+	/** Generates a string representation of the page, mainly used for debug */
+	public toString(): string{
+		return JSON.stringify({
+			id: this.id,
+			title: this.title,
+			url: this.url,
+			parent: this.parent ? this.parent.title : null
+		});
 	}
 }
 
