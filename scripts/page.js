@@ -71,6 +71,9 @@ var Page = /** @class */ (function () {
                 if (meta[key] !== undefined)
                     this[key] = meta[key];
             }
+            // By default use the file name as title
+            if (!this.title)
+                this.title = this.parsedPath.name;
         }
     };
     Page.prototype.isPublished = function () {

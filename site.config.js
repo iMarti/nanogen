@@ -2,7 +2,6 @@ const projects = require('./src/data/projects')
 
 module.exports = {
   pageMetaDefault: {
-    title: 'No Title'
   },
   site: {
     srcPath: './src',

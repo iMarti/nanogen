@@ -100,9 +100,13 @@ class Page implements IPage {
 				if (meta[key] !== undefined)
 					this[key] = meta[key];
 			}
+
+			// By default use the file name as title
+			if (!this.title)
+				this.title = this.parsedPath.name;
 		}
 	}
-	public isPublished(): boolean{
+	public isPublished(): boolean {
 		return this.publish !== false && // default is true
 			(!this.parent || this.parent.isPublished());
 	}
