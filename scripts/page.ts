@@ -80,6 +80,9 @@ class Page implements IPage {
 			path.resolve(p.parsedPath.dir) === path.resolve(this.parsedPath.dir, '..') :
 			!this.isIndex && p.parsedPath.dir === this.parsedPath.dir);
 	}
+	public isAncestor(other: Page): boolean {
+		return other === this || this.ancestors.some(ancestor => ancestor === other);
+	}
 
 	public storeMeta(sMeta: string): void {
 		const meta = JSON.parse(fixLooseJson(sMeta));

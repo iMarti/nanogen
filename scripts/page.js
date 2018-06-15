@@ -52,6 +52,9 @@ var Page = /** @class */ (function () {
             path.resolve(p.parsedPath.dir) === path.resolve(this.parsedPath.dir, '..') :
             !this.isIndex && p.parsedPath.dir === this.parsedPath.dir);
     };
+    Page.prototype.isAncestor = function (other) {
+        return other === this || this.ancestors.some(function (ancestor) { return ancestor === other; });
+    };
     Page.prototype.storeMeta = function (sMeta) {
         var meta = JSON.parse(fixLooseJson(sMeta));
         this.applyMeta(meta);
