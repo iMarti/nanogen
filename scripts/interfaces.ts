@@ -1,7 +1,14 @@
 interface IPageMeta {
 	/** Optional identifier allowing to refer to a page with `Page.myIdentifier` */
 	id?: string;
+	/** Title of the page to be put in the head title tag and often in a h1 tag */
 	title?: string;
+	/** Label to be used when referring to this page in a menu, where space is limited.
+	 * Usually a shorter version of the title.
+	 * If omitted, the title is used.
+	*/
+	menuTitle?: string;
+	/** Page description to be put into the description meta tag */
 	description?: string;
 	/** Optional layout from the `/layouts/` folder for this page */
 	layout?: string;

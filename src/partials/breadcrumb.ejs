@@ -1,6 +1,6 @@
 <% if (page.ancestors.length > 0) { %><ol class="breadcrumb">
 <% page.ancestors.forEach(ancestor => { %>
-	<li><a href="<%= ancestor.url %>"><%= ancestor.title %></a></li>
+	<li><a href="<%= ancestor.url %>"><%= ancestor.menuTitle %></a></li>
 <% }) %>
-<li><%= page.title %></li>
+<li><%= page.menuTitle %></li>
 </ol><% } %>

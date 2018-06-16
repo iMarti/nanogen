@@ -77,6 +77,9 @@ var Page = /** @class */ (function () {
             // By default use the file name as title
             if (!this.title)
                 this.title = this.isIndex ? path.basename(this.parsedPath.dir) : this.parsedPath.name;
+            // By default the title is used for menu labels
+            if (!this.menuTitle)
+                this.menuTitle = this.title;
         }
     };
     Page.prototype.isPublished = function () {

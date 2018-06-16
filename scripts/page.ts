@@ -30,6 +30,7 @@ class Page implements IPage {
 
 	public id?: string;
 	public title: string;
+	public menuTitle: string;
 	public description?: string;
 	public layout?: string;
 	public publish?: boolean;
@@ -107,6 +108,10 @@ class Page implements IPage {
 			// By default use the file name as title
 			if (!this.title)
 				this.title = this.isIndex ? path.basename(this.parsedPath.dir) : this.parsedPath.name;
+
+				// By default the title is used for menu labels
+			if (!this.menuTitle)
+				this.menuTitle = this.title;
 		}
 	}
 	public isPublished(): boolean {
