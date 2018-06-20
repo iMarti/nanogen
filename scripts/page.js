@@ -2,28 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var path = require("path");
 var urljoin = require("url-join");
-/** Adds quotes to JSON keys allowing non standard JSON to be parsed */
-function fixLooseJson(looseJson) {
-    // https://stackoverflow.com/a/39050609/183386
-    return looseJson
-        // Replace ":" with "@colon@" if it's between double-quotes
-        .replace(/:\s*"([^"]*)"/g, function (match, p1) {
-        return ': "' + p1.replace(/:/g, '@colon@') + '"';
-    })
-        // Replace ":" with "@colon@" if it's between single-quotes
-        .replace(/:\s*'([^']*)'/g, function (match, p1) {
-        return ': "' + p1.replace(/:/g, '@colon@') + '"';
-    })
-        // Add double-quotes around any tokens before the remaining ":"
-        .replace(/(['"])?([a-z0-9A-Z_]+)(['"])?\s*:/g, '"$2": ')
-        // Turn "@colon@" back into ":"
-        .replace(/@colon@/g, ':');
-}
+var Util = require("./utils");
 var Page = /** @class */ (function () {
     function Page(pathname, config) {
         this.parsedPath = path.parse(pathname);
         this.isIndex = this.parsedPath.name === config.site.indexPageName;
-        this.url = this.buildUrl(config.site.rootUrl, config.site);
+        if (!this.externalLink)
+            this.url = this.buildUrl(config.site.rootUrl, config.site);
         this.applyMeta(config.pageMetaDefault);
         Page.pages.all.push(this);
     }
@@ -56,7 +41,7 @@ var Page = /** @class */ (function () {
         return other === this || this.ancestors.some(function (ancestor) { return ancestor === other; });
     };
     Page.prototype.storeMeta = function (sMeta) {
-        var meta = JSON.parse(fixLooseJson(sMeta));
+        var meta = JSON.parse(Util.fixLooseJson(sMeta));
         this.applyMeta(meta);
     };
     Page.prototype.storeById = function () {

@@ -18,6 +18,11 @@ interface IPageMeta {
 	 * All its ancestors must be published in order for this page to be actually published.
 	 */
 	publish?: boolean;
+
+	/** An external link is not generated as a page but defines its URL, defaults to false. */
+	externalLink?: boolean;
+	/** When an external link, this value is preserved an not overridden like for standard pages. */
+	url?: string;
 }
 interface ISiteConfig {
 	srcPath?: string;

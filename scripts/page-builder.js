@@ -61,6 +61,8 @@ var Build = /** @class */ (function () {
         }
     };
     Build.prototype.build = function () {
+        if (this.page.externalLink)
+            return;
         fse.mkdirsSync(this.destPath);
         this.buildContents();
         this.buildLayout();

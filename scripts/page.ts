@@ -1,27 +1,7 @@
 import * as path from 'path';
 import * as urljoin from 'url-join';
 import { IPage, IPageMeta, IConfig, ISiteConfig } from './interfaces';
-
-/** Adds quotes to JSON keys allowing non standard JSON to be parsed */
-function fixLooseJson(looseJson: string): string {
-	// https://stackoverflow.com/a/39050609/183386
-	return looseJson
-		// Replace ":" with "@colon@" if it's between double-quotes
-		.replace(/:\s*"([^"]*)"/g, function (match, p1) {
-			return ': "' + p1.replace(/:/g, '@colon@') + '"';
-		})
-
-		// Replace ":" with "@colon@" if it's between single-quotes
-		.replace(/:\s*'([^']*)'/g, function (match, p1) {
-			return ': "' + p1.replace(/:/g, '@colon@') + '"';
-		})
-
-		// Add double-quotes around any tokens before the remaining ":"
-		.replace(/(['"])?([a-z0-9A-Z_]+)(['"])?\s*:/g, '"$2": ')
-
-		// Turn "@colon@" back into ":"
-		.replace(/@colon@/g, ':');
-}
+import * as Util from './utils';
 
 class Page implements IPage {
 	static pages: {
@@ -43,12 +23,14 @@ class Page implements IPage {
 
 	public parsedPath: path.ParsedPath;
 	public url: string;
+	public externalLink: boolean;
 
 	constructor(pathname: string, config: IConfig) {
 		this.parsedPath = path.parse(pathname);
 		this.isIndex = this.parsedPath.name === config.site.indexPageName;
 
-		this.url = this.buildUrl(config.site.rootUrl, config.site);
+		if (!this.externalLink)
+			this.url = this.buildUrl(config.site.rootUrl, config.site);
 
 		this.applyMeta(config.pageMetaDefault);
 
@@ -86,7 +68,7 @@ class Page implements IPage {
 	}
 
 	public storeMeta(sMeta: string): void {
-		const meta = JSON.parse(fixLooseJson(sMeta));
+		const meta = JSON.parse(Util.fixLooseJson(sMeta));
 		this.applyMeta(meta);
 	}
 	public storeById(): void {

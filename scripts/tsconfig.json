@@ -1,5 +1,6 @@
 {
     "files": [
+        "utils.ts",
         "page.ts",
         "page-builder.ts",
         "cli.ts"

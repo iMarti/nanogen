@@ -60,6 +60,9 @@ class Build {
 	}
 
 	public build(): void {
+		if (this.page.externalLink)
+			return;
+
 		fse.mkdirsSync(this.destPath);
 
 		this.buildContents();
