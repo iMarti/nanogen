@@ -8,6 +8,7 @@ module.exports = {
     distPath: './public',
     title: 'NanoGen',
     description: 'Static Site Generator in Node.js',
+    fileOutputMode: 'files',
     projects
   },
   sitemap: {

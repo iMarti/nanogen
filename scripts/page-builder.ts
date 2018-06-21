@@ -102,7 +102,16 @@ class Build {
 		delete this.contents;
 	}
 	private writeFile(): void {
-		const destPathname = path.join(this.destPath, this.page.parsedPath.name + this.config.site.outputExtension);
+		let destPathname: string;
+
+		if (this.config.site.fileOutputMode === 'folders' && !this.page.isIndex) {
+			const folder = path.join(this.destPath, this.page.parsedPath.name);
+			fse.mkdirSync(folder);
+			destPathname = path.join(folder, this.config.site.indexPageName + this.config.site.outputExtension);
+		} else {
+			destPathname = path.join(this.destPath, this.page.parsedPath.name + this.config.site.outputExtension);
+		}
+
 		fse.writeFileSync(destPathname, this.layout);
 
 		delete this.layout;

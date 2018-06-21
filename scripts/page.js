@@ -8,7 +8,7 @@ var Page = /** @class */ (function () {
         this.parsedPath = path.parse(pathname);
         this.isIndex = this.parsedPath.name === config.site.indexPageName;
         if (!this.externalLink)
-            this.url = this.buildUrl(config.site.rootUrl, config.site);
+            this.url = this.buildUrl(config.site);
         this.applyMeta(config.pageMetaDefault);
         Page.pages.all.push(this);
     }
@@ -71,10 +71,21 @@ var Page = /** @class */ (function () {
         return this.publish !== false && // default is true
             (!this.parent || this.parent.isPublished());
     };
-    Page.prototype.buildUrl = function (rootUrl, siteConfig) {
-        return this.isIndex ?
-            urljoin(rootUrl, (this.parsedPath.dir ? this.parsedPath.dir : '') + '/') :
-            urljoin(rootUrl, this.parsedPath.dir, this.parsedPath.name + siteConfig.outputExtension);
+    Page.prototype.buildUrl = function (siteConfig) {
+        return urljoin(siteConfig.rootUrl, this.buildRelativeUrl(siteConfig));
+        // if (siteConfig.fileOutputMode === 'folders')
+        // 	return this.isIndex ?
+        // 		urljoin(siteConfig.rootUrl, (this.parsedPath.dir ? this.parsedPath.dir : '') + '/') :
+        // 		urljoin(siteConfig.rootUrl, this.parsedPath.dir, this.parsedPath.name + '/');
+        // else
+        // 	return this.isIndex ?
+        // 		urljoin(siteConfig.rootUrl, (this.parsedPath.dir ? this.parsedPath.dir : '') + '/') :
+        // 		urljoin(siteConfig.rootUrl, this.parsedPath.dir, this.parsedPath.name + siteConfig.outputExtension);
+    };
+    Page.prototype.buildRelativeUrl = function (siteConfig) {
+        if (this.isIndex)
+            return (this.parsedPath.dir || '') + '/';
+        return urljoin(this.parsedPath.dir, this.parsedPath.name + (siteConfig.fileOutputMode === 'folders' ? '/' : siteConfig.outputExtension));
     };
     /** Generates a string representation of the page, mainly used for debug */
     Page.prototype.toString = function () {

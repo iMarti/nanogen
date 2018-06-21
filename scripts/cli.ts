@@ -60,6 +60,7 @@ let config: IConfig = require(configFile);
 const defaultSiteConfig: ISiteConfig = {
 	rootUrl: '/',
 	metaSeparator: '!!!',
+	fileOutputMode: 'files',
 	outputExtension: '.html',
 	indexPageName: 'index',
 	defaultLayout: 'default'

@@ -31,6 +31,8 @@ interface ISiteConfig {
 	rootUrl?: string;
 	/** string used in source files to separate meta properties from the page content, default is '!!!' */
 	metaSeparator?: string;
+	/** Pages that are not index can either be generated as files (/my-page.html) or folders with an index.html page (/my-page/) */
+	fileOutputMode?: 'files' | 'folders';
 	/** extension to generated HTML pages, default is '.html' */
 	outputExtension?: string;
 	/** name of the index page of each folder (without tits extension), default is 'index' */

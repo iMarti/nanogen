@@ -96,7 +96,15 @@ var Build = /** @class */ (function () {
         delete this.contents;
     };
     Build.prototype.writeFile = function () {
-        var destPathname = path.join(this.destPath, this.page.parsedPath.name + this.config.site.outputExtension);
+        var destPathname;
+        if (this.config.site.fileOutputMode === 'folders' && !this.page.isIndex) {
+            var folder = path.join(this.destPath, this.page.parsedPath.name);
+            fse.mkdirSync(folder);
+            destPathname = path.join(folder, this.config.site.indexPageName + this.config.site.outputExtension);
+        }
+        else {
+            destPathname = path.join(this.destPath, this.page.parsedPath.name + this.config.site.outputExtension);
+        }
         fse.writeFileSync(destPathname, this.layout);
         delete this.layout;
     };

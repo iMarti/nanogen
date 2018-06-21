@@ -30,7 +30,7 @@ class Page implements IPage {
 		this.isIndex = this.parsedPath.name === config.site.indexPageName;
 
 		if (!this.externalLink)
-			this.url = this.buildUrl(config.site.rootUrl, config.site);
+			this.url = this.buildUrl(config.site);
 
 		this.applyMeta(config.pageMetaDefault);
 
@@ -91,7 +91,7 @@ class Page implements IPage {
 			if (!this.title)
 				this.title = this.isIndex ? path.basename(this.parsedPath.dir) : this.parsedPath.name;
 
-				// By default the title is used for menu labels
+			// By default the title is used for menu labels
 			if (!this.menuTitle)
 				this.menuTitle = this.title;
 		}
@@ -101,14 +101,18 @@ class Page implements IPage {
 			(!this.parent || this.parent.isPublished());
 	}
 
-	private buildUrl(rootUrl: string, siteConfig: ISiteConfig): string {
-		return this.isIndex ?
-			urljoin(rootUrl, (this.parsedPath.dir ? this.parsedPath.dir : '') + '/') :
-			urljoin(rootUrl, this.parsedPath.dir, this.parsedPath.name + siteConfig.outputExtension);
+	private buildUrl(siteConfig: ISiteConfig): string {
+		return urljoin(siteConfig.rootUrl, this.buildRelativeUrl(siteConfig));
+	}
+	private buildRelativeUrl(siteConfig: ISiteConfig): string {
+		if (this.isIndex)
+			return (this.parsedPath.dir || '') + '/';
+
+		return urljoin(this.parsedPath.dir, this.parsedPath.name + (siteConfig.fileOutputMode === 'folders' ? '/' : siteConfig.outputExtension));
 	}
 
 	/** Generates a string representation of the page, mainly used for debug */
-	public toString(): string{
+	public toString(): string {
 		return JSON.stringify({
 			id: this.id,
 			title: this.title,

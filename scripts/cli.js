@@ -56,6 +56,7 @@ var config = require(configFile);
 var defaultSiteConfig = {
     rootUrl: '/',
     metaSeparator: '!!!',
+    fileOutputMode: 'files',
     outputExtension: '.html',
     indexPageName: 'index',
     defaultLayout: 'default'
