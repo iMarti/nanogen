@@ -6,6 +6,7 @@ import * as glob from 'glob';
 import * as ejs from 'ejs';
 import * as marked from 'marked';
 import { remove } from 'lodash';
+import * as json5 from 'json5';
 
 class Build {
 	public page: Page;
@@ -36,7 +37,7 @@ class Build {
 			const firstPart = source.substr(0, match.index).trim();
 			if (firstPart.length > 0) {
 				if (firstPart[0] === '{')
-					this.page.storeMeta(firstPart);
+					this.page.applyMeta(json5.parse(firstPart));
 				else
 					this.parts.body = firstPart;
 			}

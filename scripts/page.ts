@@ -1,7 +1,6 @@
 import * as path from 'path';
 import * as urljoin from 'url-join';
 import { IPage, IPageMeta, IConfig, ISiteConfig } from './interfaces';
-import * as Util from './utils';
 
 class Page implements IPage {
 	static pages: {
@@ -67,10 +66,6 @@ class Page implements IPage {
 		return other === this || this.ancestors.some(ancestor => ancestor === other);
 	}
 
-	public storeMeta(sMeta: string): void {
-		const meta = JSON.parse(Util.fixLooseJson(sMeta));
-		this.applyMeta(meta);
-	}
 	public storeById(): void {
 		if (this.id) {
 			if (this.id in Page.pages) {
@@ -80,7 +75,7 @@ class Page implements IPage {
 			Page.pages[this.id] = this;
 		}
 	}
-	private applyMeta(meta: IPageMeta): void {
+	public applyMeta(meta: IPageMeta): void {
 		if (meta !== null && typeof meta === 'object') {
 			for (let key in meta) {
 				if (meta[key] !== undefined)

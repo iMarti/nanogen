@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var path = require("path");
 var urljoin = require("url-join");
-var Util = require("./utils");
 var Page = /** @class */ (function () {
     function Page(pathname, config) {
         this.parsedPath = path.parse(pathname);
@@ -40,10 +39,6 @@ var Page = /** @class */ (function () {
     Page.prototype.isAncestor = function (other) {
         return other === this || this.ancestors.some(function (ancestor) { return ancestor === other; });
     };
-    Page.prototype.storeMeta = function (sMeta) {
-        var meta = JSON.parse(Util.fixLooseJson(sMeta));
-        this.applyMeta(meta);
-    };
     Page.prototype.storeById = function () {
         if (this.id) {
             if (this.id in Page.pages) {
@@ -73,14 +68,6 @@ var Page = /** @class */ (function () {
     };
     Page.prototype.buildUrl = function (siteConfig) {
         return urljoin(siteConfig.rootUrl, this.buildRelativeUrl(siteConfig));
-        // if (siteConfig.fileOutputMode === 'folders')
-        // 	return this.isIndex ?
-        // 		urljoin(siteConfig.rootUrl, (this.parsedPath.dir ? this.parsedPath.dir : '') + '/') :
-        // 		urljoin(siteConfig.rootUrl, this.parsedPath.dir, this.parsedPath.name + '/');
-        // else
-        // 	return this.isIndex ?
-        // 		urljoin(siteConfig.rootUrl, (this.parsedPath.dir ? this.parsedPath.dir : '') + '/') :
-        // 		urljoin(siteConfig.rootUrl, this.parsedPath.dir, this.parsedPath.name + siteConfig.outputExtension);
     };
     Page.prototype.buildRelativeUrl = function (siteConfig) {
         if (this.isIndex)

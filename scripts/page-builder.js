@@ -16,6 +16,7 @@ var glob = require("glob");
 var ejs = require("ejs");
 var marked = require("marked");
 var lodash_1 = require("lodash");
+var json5 = require("json5");
 var Build = /** @class */ (function () {
     function Build(pathname, config) {
         this.pathname = pathname;
@@ -41,7 +42,7 @@ var Build = /** @class */ (function () {
             var firstPart = source.substr(0, match.index).trim();
             if (firstPart.length > 0) {
                 if (firstPart[0] === '{')
-                    this.page.storeMeta(firstPart);
+                    this.page.applyMeta(json5.parse(firstPart));
                 else
                     this.parts.body = firstPart;
             }
