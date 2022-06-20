@@ -5,7 +5,9 @@
         "cli.ts"
     ],
     "compilerOptions": {
-        "lib": ["es6"],
-        "target": "es5"
+        "lib": ["ES6"],
+        "target": "ES5",
+        "module": "NodeNext",
+        "moduleResolution": "Node"
     }
 }

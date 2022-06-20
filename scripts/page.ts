@@ -1,5 +1,6 @@
 import * as path from 'path';
-import * as urljoin from 'url-join';
+//import urlJoin from 'url-join';
+import URI from 'urijs';
 import { IPage, IPageMeta, IConfig, ISiteConfig } from './interfaces';
 
 class Page implements IPage {
@@ -97,13 +98,19 @@ class Page implements IPage {
 	}
 
 	private buildUrl(siteConfig: ISiteConfig): string {
-		return urljoin(siteConfig.rootUrl, this.buildRelativeUrl(siteConfig));
+		const relativeUrl = this.buildRelativeUrl(siteConfig);
+		const url = (siteConfig.rootUrl == '/' && relativeUrl == '/') ? '/' : siteConfig.rootUrl + relativeUrl;
+		return url;
 	}
 	private buildRelativeUrl(siteConfig: ISiteConfig): string {
 		if (this.isIndex)
 			return (this.parsedPath.dir || '') + '/';
 
-		return urljoin(this.parsedPath.dir, this.parsedPath.name + (siteConfig.fileOutputMode === 'folders' ? '/' : siteConfig.outputExtension));
+		let url = this.parsedPath.name + (siteConfig.fileOutputMode === 'folders' ? '/' : siteConfig.outputExtension);
+		if (this.parsedPath.dir)
+			url = URI(url).directory(this.parsedPath.dir).href();
+
+			return url;
 	}
 
 	/** Generates a string representation of the page, mainly used for debug */

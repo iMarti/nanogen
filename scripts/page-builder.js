@@ -1,22 +1,48 @@
 "use strict";
-var __assign = (this && this.__assign) || Object.assign || function(t) {
-    for (var s, i = 1, n = arguments.length; i < n; i++) {
-        s = arguments[i];
-        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-            t[p] = s[p];
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
     }
-    return t;
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var fse = require("fs-extra");
-var path = require("path");
-var urljoin = require("url-join");
+exports.build = void 0;
+var fse = __importStar(require("fs-extra"));
+var path = __importStar(require("path"));
 var page_1 = require("./page");
-var glob = require("glob");
-var ejs = require("ejs");
-var marked = require("marked");
+var glob = __importStar(require("glob"));
+var ejs = __importStar(require("ejs"));
+var marked_1 = require("marked");
 var lodash_1 = require("lodash");
-var json5 = require("json5");
+var json5 = __importStar(require("json5"));
 var Build = /** @class */ (function () {
     function Build(pathname, config) {
         this.pathname = pathname;
@@ -25,7 +51,7 @@ var Build = /** @class */ (function () {
         this.contents = {};
         this.page = new page_1.Page(pathname, this.config);
         this.destPath = path.join(this.config.site.distPath, this.page.parsedPath.dir);
-        this.renderData = __assign({}, config, { page: this.page, pages: page_1.Page.pages });
+        this.renderData = __assign(__assign({}, config), { page: this.page, pages: page_1.Page.pages });
         var source = this.loadSource();
         this.splitParts(source);
     }
@@ -80,7 +106,7 @@ var Build = /** @class */ (function () {
             case '.ejs':
                 return ejs.render(partSource, this.renderData, { filename: this.pathname });
             case '.md':
-                return marked(partSource);
+                return (0, marked_1.marked)(partSource);
             default:
                 return partSource;
         }
@@ -92,7 +118,7 @@ var Build = /** @class */ (function () {
             this.config.site.defaultLayout;
         var fullPath = path.join(this.config.site.srcPath, 'layouts', layout + '.ejs');
         var source = fse.readFileSync(fullPath, { encoding: 'utf8' });
-        var renderData = __assign({}, this.renderData, { contents: this.contents });
+        var renderData = __assign(__assign({}, this.renderData), { contents: this.contents });
         this.layout = ejs.render(source, renderData, { filename: fullPath });
         delete this.contents;
     };
@@ -113,17 +139,17 @@ var Build = /** @class */ (function () {
 }());
 function buildSitemap(config, builds) {
     var tags = builds.map(function (build) {
-        var url = urljoin(config.sitemap.domain, build.page.url);
+        var url = new URL(build.page.url, config.sitemap.domain).href;
         var escaped = url
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&apos;');
-        var tag = "<url>\n\t<loc>" + escaped + "</loc> \n</url>";
+        var tag = "<url>\n\t<loc>".concat(escaped, "</loc> \n</url>");
         return tag;
     });
-    var content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n" + tags.join('\n') + "\n</urlset>";
+    var content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n".concat(tags.join('\n'), "\n</urlset>");
     var destPathname = path.join(config.site.distPath, 'sitemap.xml');
     fse.writeFileSync(destPathname, content);
 }
@@ -133,15 +159,15 @@ function build(config) {
     // clear destination folder
     fse.emptyDirSync(config.site.distPath);
     // copy assets folder
-    fse.copySync(config.site.srcPath + "/assets", config.site.distPath);
+    fse.copySync("".concat(config.site.srcPath, "/assets"), config.site.distPath);
     // build the pages
-    var pathnames = glob.sync('**/*.@(ejs|md|html)', { cwd: config.site.srcPath + "/pages" });
+    var pathnames = glob.sync('**/*.@(ejs|md|html)', { cwd: "".concat(config.site.srcPath, "/pages") });
     var builds = pathnames.map(function (pathname) { return new Build(pathname, config); });
     builds.forEach(function (build) { return build.page.bindParent(); });
     builds = builds.filter(function (build) {
         var isPublished = build.page.isPublished();
         if (!isPublished)
-            lodash_1.remove(page_1.Page.pages.all, build.page);
+            (0, lodash_1.remove)(page_1.Page.pages.all, build.page);
         return isPublished;
     });
     builds.forEach(function (build) { return build.page.storeById(); });
@@ -154,6 +180,6 @@ function build(config) {
     var timeDiff = process.hrtime(startTime);
     var duration = timeDiff[0] * 1000 + timeDiff[1] / 1e6;
     var round = function (d) { return Math.round(d * 10) / 10; };
-    console.log(new Date().toLocaleString() + " Succesfully built " + builds.length + " pages in " + round(duration) + " ms, " + round(duration / builds.length) + " ms/page");
+    console.log("".concat(new Date().toLocaleString(), " Succesfully built ").concat(builds.length, " pages in ").concat(round(duration), " ms, ").concat(round(duration / builds.length), " ms/page"));
 }
 exports.build = build;
