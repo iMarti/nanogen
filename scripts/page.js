@@ -1,7 +1,35 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-var path = require("path");
-var urljoin = require("url-join");
+exports.Page = void 0;
+var path = __importStar(require("path"));
+//import urlJoin from 'url-join';
+var urijs_1 = __importDefault(require("urijs"));
 var Page = /** @class */ (function () {
     function Page(pathname, config) {
         this.parsedPath = path.parse(pathname);
@@ -43,7 +71,7 @@ var Page = /** @class */ (function () {
         if (this.id) {
             if (this.id in Page.pages) {
                 var other = Page.pages[this.id];
-                throw "Duplicate page ID \"" + this.id + "\" in " + this.parsedPath.dir + "/" + this.parsedPath.name + this.parsedPath.ext + " and " + other.parsedPath.dir + "/" + other.parsedPath.name + other.parsedPath.ext;
+                throw "Duplicate page ID \"".concat(this.id, "\" in ").concat(this.parsedPath.dir, "/").concat(this.parsedPath.name).concat(this.parsedPath.ext, " and ").concat(other.parsedPath.dir, "/").concat(other.parsedPath.name).concat(other.parsedPath.ext);
             }
             Page.pages[this.id] = this;
         }
@@ -67,12 +95,17 @@ var Page = /** @class */ (function () {
             (!this.parent || this.parent.isPublished());
     };
     Page.prototype.buildUrl = function (siteConfig) {
-        return urljoin(siteConfig.rootUrl, this.buildRelativeUrl(siteConfig));
+        var relativeUrl = this.buildRelativeUrl(siteConfig);
+        var url = (siteConfig.rootUrl == '/' && relativeUrl == '/') ? '/' : siteConfig.rootUrl + relativeUrl;
+        return url;
     };
     Page.prototype.buildRelativeUrl = function (siteConfig) {
         if (this.isIndex)
             return (this.parsedPath.dir || '') + '/';
-        return urljoin(this.parsedPath.dir, this.parsedPath.name + (siteConfig.fileOutputMode === 'folders' ? '/' : siteConfig.outputExtension));
+        var url = this.parsedPath.name + (siteConfig.fileOutputMode === 'folders' ? '/' : siteConfig.outputExtension);
+        if (this.parsedPath.dir)
+            url = (0, urijs_1.default)(url).directory(this.parsedPath.dir).href();
+        return url;
     };
     /** Generates a string representation of the page, mainly used for debug */
     Page.prototype.toString = function () {

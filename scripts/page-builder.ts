@@ -1,10 +1,9 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import * as urljoin from 'url-join';
 import { Page, IConfig } from './page';
 import * as glob from 'glob';
 import * as ejs from 'ejs';
-import * as marked from 'marked';
+import { marked } from 'marked';
 import { remove } from 'lodash';
 import * as json5 from 'json5';
 
@@ -121,7 +120,7 @@ class Build {
 
 function buildSitemap(config: IConfig, builds: Build[]): void {
 	const tags = builds.map(build => {
-		const url = urljoin(config.sitemap.domain, build.page.url);
+		const url = new URL(build.page.url, config.sitemap.domain).href;
 		const escaped = url
 			.replace(/&/g, '&amp;')
 			.replace(/</g, '&lt;')
