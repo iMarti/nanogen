@@ -26,6 +26,11 @@
     "urijs": "^1.19.11"
   },
   "devDependencies": {
+    "@types/ejs": "^3.1.5",
+    "@types/fs-extra": "^11.0.4",
+    "@types/live-server": "^1.2.3",
+    "@types/lodash": "^4.17.21",
+    "@types/marked": "^5.0.2",
     "@types/node": "^20.0.0",
     "typescript": "^5.9.3"
   }
