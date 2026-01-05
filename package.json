@@ -1,6 +1,6 @@
 {
   "name": "nanogen",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "",
   "main": "index.js",
   "bin": {
@@ -32,6 +32,7 @@
     "@types/lodash": "^4.17.21",
     "@types/marked": "^5.0.2",
     "@types/node": "^20.0.0",
+    "@types/urijs": "^1.19.26",
     "typescript": "^5.9.3"
   }
 }
