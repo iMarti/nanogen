@@ -21,9 +21,19 @@ Compared to the repository it has been forked from, here are the main difference
 
 ## Setup
 
+Build NanoGen:
 ```console
 $ npm i
+```
+
+Install `nanogen` as a command tool:
+```console
 $ npm link
+```
+Otherwise the tool is invoked with `node scripts/cli.js`.
+
+As you write pages for your website, run these commands in two separate consoles, to watch and serve the pages, respectively. 
+```console
 $ nanogen -w
 $ nanogen -s
 ```
