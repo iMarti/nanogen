@@ -1,43 +1,44 @@
 import * as path from 'path';
-//import urlJoin from 'url-join';
 import URI from 'urijs';
 import { IPage, IPageMeta, IConfig, ISiteConfig } from './interfaces';
 
 class Page implements IPage {
 	static pages: {
-		all: Page[]
-	};
+		all: Page[];
+		[key: string]: Page | Page[];
+	} = { all: [] };
 
 	public id?: string;
-	public title: string;
-	public menuTitle: string;
+	public title!: string;
+	public menuTitle!: string;
 	public description?: string;
 	public layout?: string;
 	public publish?: boolean;
 	public isIndex: boolean;
 
-	public parent: IPage;
-	public children: IPage[];
-	public siblings: IPage[];
-	public ancestors: IPage[];
+	public parent!: IPage;
+	public children!: IPage[];
+	public siblings!: IPage[];
+	public ancestors!: IPage[];
 
 	public parsedPath: path.ParsedPath;
-	public url: string;
-	public externalLink: boolean;
+	public url!: string;
+	public externalLink: boolean = false;
 
 	constructor(pathname: string, config: IConfig) {
 		this.parsedPath = path.parse(pathname);
 		this.isIndex = this.parsedPath.name === config.site.indexPageName;
 
-		if (!this.externalLink)
-			this.url = this.buildUrl(config.site);
-
 		this.applyMeta(config.pageMetaDefault);
+
+		if (!this.externalLink) {
+			this.url = this.buildUrl(config.site);
+		}
 
 		Page.pages.all.push(this);
 	}
 	public bindParent(): void {
-		this.parent = Page.pages.all.find(p => this.isParent(p));
+		this.parent = Page.pages.all.find(p => this.isParent(p))!;
 	}
 	public bindChildren(): void {
 		this.children = Page.pages.all.filter(page => page.parent === this);
@@ -70,7 +71,7 @@ class Page implements IPage {
 	public storeById(): void {
 		if (this.id) {
 			if (this.id in Page.pages) {
-				const other: Page = Page.pages[this.id];
+				const other: Page = Page.pages[this.id] as Page;
 				throw `Duplicate page ID "${this.id}" in ${this.parsedPath.dir}/${this.parsedPath.name}${this.parsedPath.ext} and ${other.parsedPath.dir}/${other.parsedPath.name}${other.parsedPath.ext}`;
 			}
 			Page.pages[this.id] = this;
@@ -78,18 +79,21 @@ class Page implements IPage {
 	}
 	public applyMeta(meta: IPageMeta): void {
 		if (meta !== null && typeof meta === 'object') {
-			for (let key in meta) {
-				if (meta[key] !== undefined)
-					this[key] = meta[key];
+			for (const key in meta) {
+				if (meta[key as keyof IPageMeta] !== undefined) {
+					(this as any)[key] = meta[key as keyof IPageMeta];
+				}
 			}
 
 			// By default use the file name as title
-			if (!this.title)
+			if (!this.title) {
 				this.title = this.isIndex ? path.basename(this.parsedPath.dir) : this.parsedPath.name;
+			}
 
 			// By default the title is used for menu labels
-			if (!this.menuTitle)
+			if (!this.menuTitle) {
 				this.menuTitle = this.title;
+			}
 		}
 	}
 	public isPublished(): boolean {
@@ -103,14 +107,16 @@ class Page implements IPage {
 		return url;
 	}
 	private buildRelativeUrl(siteConfig: ISiteConfig): string {
-		if (this.isIndex)
+		if (this.isIndex) {
 			return (this.parsedPath.dir || '') + '/';
+		}
 
 		let url = this.parsedPath.name + (siteConfig.fileOutputMode === 'folders' ? '/' : siteConfig.outputExtension);
-		if (this.parsedPath.dir)
+		if (this.parsedPath.dir) {
 			url = URI(url).directory(this.parsedPath.dir).href();
+		}
 
-			return url;
+		return url;
 	}
 
 	/** Generates a string representation of the page, mainly used for debug */
@@ -119,7 +125,7 @@ class Page implements IPage {
 			id: this.id,
 			title: this.title,
 			url: this.url,
-			parent: this.parent ? this.parent.title : null
+			parent: this.parent?.title ?? null
 		});
 	}
 }

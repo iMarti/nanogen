@@ -24,13 +24,14 @@ Compared to the repository it has been forked from, here are the main difference
 Build NanoGen:
 ```console
 $ npm i
+$ npm run compile
 ```
 
 Install `nanogen` as a command tool:
 ```console
 $ npm link
 ```
-Otherwise the tool is invoked with `node scripts/cli.js`.
+Otherwise the tool is invoked with `node nanogen.js`.
 
 As you write pages for your website, run these commands in two separate consoles, to watch and serve the pages, respectively. 
 ```console
@@ -48,6 +49,6 @@ The properties of `pageMetaDefault` will be assigned to each page then overriden
 
 ## Build the builder
 
-If you made changes to the TypeScript files in `/scripts`, enter that folder and type `tsc` to transpile into Javascript.
+If you made changes to the TypeScript files in `/scripts`, execute `npm run compile` which will bundle the TypeScript files into a single `nanogen.js` file in the root directory.
 
 Install the CLI with `npm link` on the root folder, then you can call `nanogen -h` to get available command options.

@@ -4,11 +4,11 @@
   "description": "",
   "main": "index.js",
   "bin": {
-    "nanogen": "./scripts/cli.js"
+    "nanogen": "./nanogen.js"
   },
   "scripts": {
-    "build": "node scripts/cli.js",
-    "compile": "cd scripts && tsc",
+    "build": "node nanogen.js",
+    "compile": "esbuild scripts/cli.ts --bundle --platform=node --outfile=nanogen.js --format=cjs --external:chokidar --external:ejs --external:fs-extra --external:glob --external:json5 --external:live-server --external:lodash --external:marked --external:urijs",
     "serve": "serve ./public"
   },
   "keywords": [],
@@ -33,6 +33,7 @@
     "@types/marked": "^5.0.2",
     "@types/node": "^20.0.0",
     "@types/urijs": "^1.19.26",
+    "esbuild": "^0.27.2",
     "typescript": "^5.9.3"
   }
 }
