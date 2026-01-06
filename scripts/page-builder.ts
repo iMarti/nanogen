@@ -1,81 +1,97 @@
-import * as fse from 'fs-extra';
+import fse from 'fs-extra';
 import * as path from 'path';
-import { Page, IConfig } from './page';
+import { Page, IConfig } from './page.js';
 import * as glob from 'glob';
 import * as ejs from 'ejs';
 import { marked } from 'marked';
-import { remove } from 'lodash';
-import * as json5 from 'json5';
+import lodash from 'lodash';
+import json5 from 'json5';
 
+/**
+ * Represents a page build process
+ */
 class Build {
-	public page: Page;
-	public renderData: { [key: string]: any };
-	public parts: { [partId: string]: string } = {};
-	public contents: { [partId: string]: string } = {};
-	public layout: string;
-	private destPath: string;
+	public readonly page: Page;
+	public readonly renderData: Record<string, unknown>;
+	#parts: Record<string, string> = {};
+	#contents: Record<string, string> = {};
+	#layout!: string;
+	#destPath: string;
 
-	constructor(public pathname: string, public config: IConfig) {
+	/**
+	 * Create a new Build instance
+	 * @param pathname Path to the page file
+	 * @param config Site configuration
+	 */
+	constructor(public readonly pathname: string, public readonly config: IConfig) {
 		this.page = new Page(pathname, this.config);
-		this.destPath = path.join(this.config.site.distPath, this.page.parsedPath.dir);
+		this.#destPath = path.join(this.config.site.distPath, this.page.parsedPath.dir);
 		this.renderData = { ...config, page: this.page, pages: Page.pages };
-		const source = this.loadSource();
-		this.splitParts(source);
+		const source = this.#loadSource();
+		this.#splitParts(source);
 	}
-	private loadSource(): string {
+	#loadSource(): string {
 		const fullPath = path.join(this.config.site.srcPath, 'pages', this.pathname);
 		return fse.readFileSync(fullPath, { encoding: 'utf8' });
 	}
-	private splitParts(source: string): void {
-		const pattern = '^' + this.config.site.metaSeparator + '([a-zA-Z_$][0-9a-zA-Z_$]*)?$';
+	#splitParts(source: string): void {
+		const pattern = `^${this.config.site.metaSeparator}([a-zA-Z_$][0-9a-zA-Z_$]*)?$`;
 		const reSeparator = new RegExp(pattern, 'gm');
 
 		// Before the first separator we can find optional meta information or the body part
-		let match = reSeparator.exec(source);
+		const match = reSeparator.exec(source);
 		if (match !== null && match.index > 0) {
-			const firstPart = source.substr(0, match.index).trim();
+			const firstPart = source.substring(0, match.index).trim();
 			if (firstPart.length > 0) {
-				if (firstPart[0] === '{')
+				if (firstPart[0] === '{') {
 					this.page.applyMeta(json5.parse(firstPart));
-				else
-					this.parts.body = firstPart;
+				} else {
+					this.#parts.body = firstPart;
+				}
 			}
 		}
 
-		if (match === null) // No separator at all means the whole content is the page body
-			this.parts.body = source;
-		else {
-			while (match !== null) {
-				let partId = match[1] || 'body';
+		if (match === null) { // No separator at all means the whole content is the page body
+			this.#parts.body = source;
+		} else {
+			let currentMatch = match;
+			while (currentMatch !== null) {
+				const partId = currentMatch[1] || 'body';
 
 				// The content between previous separator and the next (or end of file) is the next part
 				const start = reSeparator.lastIndex;
-				match = reSeparator.exec(source);
-				const end = match ? match.index : undefined;
+				const nextMatch = reSeparator.exec(source);
+				const end = nextMatch ? nextMatch.index : undefined;
 
 				const part = source.substring(start, end).trim();
-				this.parts[partId] = part;
+				this.#parts[partId] = part;
+				currentMatch = nextMatch;
 			}
 		}
 	}
 
+	/**
+	 * Build the page
+	 */
 	public build(): void {
-		if (this.page.externalLink)
+		if (this.page.externalLink) {
 			return;
-
-		fse.mkdirsSync(this.destPath);
-
-		this.buildContents();
-		this.buildLayout();
-		this.writeFile();
-	}
-	private buildContents(): void{
-		for (let partId in this.parts) {
-			this.contents[partId] = this.buildContent(this.parts[partId]);
 		}
-		delete this.parts;
+
+		fse.mkdirsSync(this.#destPath);
+
+		this.#buildContents();
+		this.#buildLayout();
+		this.#writeFile();
 	}
-	private buildContent(partSource: string): string {
+	#buildContents(): void {
+		for (const partId in this.#parts) {
+			this.#contents[partId] = this.#buildContent(this.#parts[partId]);
+		}
+		// Clear parts after processing
+		this.#parts = {};
+	}
+	#buildContent(partSource: string): string {
 		switch (this.page.parsedPath.ext) {
 			case '.ejs':
 				return ejs.render(partSource, this.renderData, { filename: this.pathname });
@@ -85,52 +101,47 @@ class Build {
 				return partSource;
 		}
 	}
-	private buildLayout(): void {
+	#buildLayout(): void {
 		// The page layout is defined by order of priority on the page, its parent or on the site level.
-		const layout =
-			this.page.layout ||
-			(this.page.parent ? this.page.parent.childLayout : undefined) ||
-			this.config.site.defaultLayout;
+		const layout = this.page.layout ?? this.page.parent?.childLayout ?? this.config.site.defaultLayout;
 
-		const fullPath = path.join(this.config.site.srcPath, 'layouts', layout + '.ejs');
-		let source = fse.readFileSync(fullPath, { encoding: 'utf8' });
+		const fullPath = path.join(this.config.site.srcPath, 'layouts', `${layout}.ejs`);
+		const source = fse.readFileSync(fullPath, { encoding: 'utf8' });
 
-		const renderData = { ...this.renderData, contents: this.contents };
+		const renderData = { ...this.renderData, contents: this.#contents };
 
-		this.layout = ejs.render(source, renderData, { filename: fullPath });
+		this.#layout = ejs.render(source, renderData, { filename: fullPath });
 
-		delete this.contents;
+		// Clear contents after processing
+		this.#contents = {};
 	}
-	private writeFile(): void {
+	#writeFile(): void {
 		let destPathname: string;
 
 		if (this.config.site.fileOutputMode === 'folders' && !this.page.isIndex) {
-			const folder = path.join(this.destPath, this.page.parsedPath.name);
+			const folder = path.join(this.#destPath, this.page.parsedPath.name);
 			fse.mkdirSync(folder);
-			destPathname = path.join(folder, this.config.site.indexPageName + this.config.site.outputExtension);
+			destPathname = path.join(folder, `${this.config.site.indexPageName}${this.config.site.outputExtension}`);
 		} else {
-			destPathname = path.join(this.destPath, this.page.parsedPath.name + this.config.site.outputExtension);
+			destPathname = path.join(this.#destPath, `${this.page.parsedPath.name}${this.config.site.outputExtension}`);
 		}
 
-		fse.writeFileSync(destPathname, this.layout);
-
-		delete this.layout;
+		fse.writeFileSync(destPathname, this.#layout);
 	}
 }
 
-function buildSitemap(config: IConfig, builds: Build[]): void {
+function buildSitemap(config: IConfig, builds: readonly Build[]): void {
 	const tags = builds.map(build => {
-		const url = new URL(build.page.url, config.sitemap.domain).href;
+		const url = new URL(build.page.url, config.sitemap!.domain).href;
 		const escaped = url
 			.replace(/&/g, '&amp;')
 			.replace(/</g, '&lt;')
 			.replace(/>/g, '&gt;')
 			.replace(/"/g, '&quot;')
 			.replace(/'/g, '&apos;');
-		const tag = `<url>
-	<loc>${escaped}</loc> 
+		return `<url>
+	<loc>${escaped}</loc>
 </url>`;
-		return tag;
 	});
 
 	const content = `<?xml version="1.0" encoding="UTF-8"?>
@@ -142,6 +153,10 @@ ${tags.join('\n')}
 	fse.writeFileSync(destPathname, content);
 }
 
+/**
+ * Build the entire site
+ * @param config Site configuration
+ */
 function build(config: IConfig): void {
 	const startTime = process.hrtime();
 
@@ -159,8 +174,9 @@ function build(config: IConfig): void {
 	builds.forEach(build => build.page.bindParent());
 	builds = builds.filter(build => {
 		const isPublished = build.page.isPublished();
-		if (!isPublished)
-			remove(Page.pages.all, build.page);
+		if (!isPublished) {
+			lodash.remove(Page.pages.all, build.page);
+		}
 		return isPublished;
 	});
 	builds.forEach(build => build.page.storeById());
@@ -168,14 +184,15 @@ function build(config: IConfig): void {
 	builds.forEach(build => build.build());
 
 	// build the sitemap
-	if (config.sitemap)
+	if (config.sitemap) {
 		buildSitemap(config, builds);
+	}
 
 	// display build time
 	const timeDiff = process.hrtime(startTime);
 	const duration = timeDiff[0] * 1000 + timeDiff[1] / 1e6;
 	const round = (d: number) => Math.round(d * 10) / 10;
-	console.log(`${new Date().toLocaleString()} Succesfully built ${builds.length} pages in ${round(duration)} ms, ${round(duration / builds.length)} ms/page`);
+	console.log(`${new Date().toLocaleString()} Successfully built ${builds.length} pages in ${round(duration)} ms, ${round(duration / builds.length)} ms/page`);
 }
 
 export { build, IConfig }

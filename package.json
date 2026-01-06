@@ -2,13 +2,14 @@
   "name": "nanogen",
   "version": "0.0.2",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "bin": {
     "nanogen": "./nanogen.js"
   },
   "scripts": {
     "build": "node nanogen.js",
-    "compile": "esbuild scripts/cli.ts --bundle --platform=node --outfile=nanogen.js --format=cjs --external:chokidar --external:ejs --external:fs-extra --external:glob --external:json5 --external:live-server --external:lodash --external:marked --external:urijs",
+    "compile": "esbuild scripts/cli.ts --bundle --platform=node --outfile=nanogen.js --format=esm --external:chokidar --external:ejs --external:fs-extra --external:glob --external:json5 --external:live-server --external:lodash --external:marked --external:urijs",
     "serve": "serve ./public"
   },
   "keywords": [],

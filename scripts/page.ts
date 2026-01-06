@@ -1,7 +1,10 @@
 import * as path from 'path';
 import URI from 'urijs';
-import { IPage, IPageMeta, IConfig, ISiteConfig } from './interfaces';
+import { IPage, IPageMeta, IConfig, ISiteConfig } from './interfaces.js';
 
+/**
+ * Represents a page in the site
+ */
 class Page implements IPage {
 	static pages: {
 		all: Page[];
@@ -25,6 +28,11 @@ class Page implements IPage {
 	public url!: string;
 	public externalLink: boolean = false;
 
+	/**
+	 * Create a new Page instance
+	 * @param pathname Path to the page file
+	 * @param config Site configuration
+	 */
 	constructor(pathname: string, config: IConfig) {
 		this.parsedPath = path.parse(pathname);
 		this.isIndex = this.parsedPath.name === config.site.indexPageName;
