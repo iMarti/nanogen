@@ -94,12 +94,73 @@ class Build {
 	#buildContent(partSource: string): string {
 		switch (this.page.parsedPath.ext) {
 			case '.ejs':
-				return ejs.render(partSource, this.renderData, { filename: this.pathname });
+				return ejs.render(partSource, this.renderData, {
+					filename: this.pathname,
+					includer: this.#createIncluder()
+				});
 			case '.md':
 				return marked(partSource);
 			default:
 				return partSource;
 		}
+	}
+	#createIncluder() {
+		return (originalPath: string, parsedPath: string) => {
+			// EJS resolves relative paths relative to the template file
+			const templateDir = path.dirname(path.join(this.config.site.srcPath, 'pages', parsedPath || this.pathname));
+			
+			// Try different extensions like EJS does
+			const extensions = ['', '.ejs', '.html', '.md', '.js'];
+			let includePath: string | null = null;
+			
+			for (const ext of extensions) {
+				const candidate = path.resolve(templateDir, originalPath + ext);
+				if (fse.existsSync(candidate)) {
+					includePath = candidate;
+					break;
+				}
+			}
+			
+			if (!includePath) {
+				includePath = path.resolve(templateDir, originalPath);
+			}
+			
+			try {
+				const content = fse.readFileSync(includePath, 'utf8');
+				return { content, filename: includePath };
+			} catch (err) {
+				throw new Error(`EJS include failed: "${originalPath}" not found. Searched at: ${includePath}`);
+			}
+		};
+	}
+	#createLayoutIncluder(layoutPath: string) {
+		return (originalPath: string, parsedPath: string) => {
+			// For layouts, always resolve relative to the layouts directory
+			const layoutsDir = path.join(this.config.site.srcPath, 'layouts');
+			
+			// Try different extensions like EJS does
+			const extensions = ['', '.ejs', '.html', '.js'];
+			let includePath: string | null = null;
+			
+			for (const ext of extensions) {
+				const candidate = path.resolve(layoutsDir, originalPath + ext);
+				if (fse.existsSync(candidate)) {
+					includePath = candidate;
+					break;
+				}
+			}
+			
+			if (!includePath) {
+				includePath = path.resolve(layoutsDir, originalPath);
+			}
+			
+			try {
+				const content = fse.readFileSync(includePath, 'utf8');
+				return { content, filename: includePath };
+			} catch (err) {
+				throw new Error(`EJS include failed: "${originalPath}" not found. Searched at: ${includePath}`);
+			}
+		};
 	}
 	#buildLayout(): void {
 		// The page layout is defined by order of priority on the page, its parent or on the site level.
@@ -110,7 +171,10 @@ class Build {
 
 		const renderData = { ...this.renderData, contents: this.#contents };
 
-		this.#layout = ejs.render(source, renderData, { filename: fullPath });
+		this.#layout = ejs.render(source, renderData, {
+			filename: fullPath,
+			includer: this.#createLayoutIncluder(fullPath)
+		});
 
 		// Clear contents after processing
 		this.#contents = {};

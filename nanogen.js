@@ -189,19 +189,71 @@ var Build = class {
   #buildContent(partSource) {
     switch (this.page.parsedPath.ext) {
       case ".ejs":
-        return ejs.render(partSource, this.renderData, { filename: this.pathname });
+        return ejs.render(partSource, this.renderData, {
+          filename: this.pathname,
+          includer: this.#createIncluder()
+        });
       case ".md":
         return marked(partSource);
       default:
         return partSource;
     }
   }
+  #createIncluder() {
+    return (originalPath, parsedPath) => {
+      const templateDir = path2.dirname(path2.join(this.config.site.srcPath, "pages", parsedPath || this.pathname));
+      const extensions = ["", ".ejs", ".html", ".md", ".js"];
+      let includePath = null;
+      for (const ext of extensions) {
+        const candidate = path2.resolve(templateDir, originalPath + ext);
+        if (fse.existsSync(candidate)) {
+          includePath = candidate;
+          break;
+        }
+      }
+      if (!includePath) {
+        includePath = path2.resolve(templateDir, originalPath);
+      }
+      try {
+        const content = fse.readFileSync(includePath, "utf8");
+        return { content, filename: includePath };
+      } catch (err) {
+        throw new Error(`EJS include failed: "${originalPath}" not found. Searched at: ${includePath}`);
+      }
+    };
+  }
+  #createLayoutIncluder(layoutPath) {
+    return (originalPath, parsedPath) => {
+      const layoutsDir = path2.join(this.config.site.srcPath, "layouts");
+      const extensions = ["", ".ejs", ".html", ".js"];
+      let includePath = null;
+      for (const ext of extensions) {
+        const candidate = path2.resolve(layoutsDir, originalPath + ext);
+        if (fse.existsSync(candidate)) {
+          includePath = candidate;
+          break;
+        }
+      }
+      if (!includePath) {
+        includePath = path2.resolve(layoutsDir, originalPath);
+      }
+      try {
+        const content = fse.readFileSync(includePath, "utf8");
+        return { content, filename: includePath };
+      } catch (err) {
+        throw new Error(`EJS include failed: "${originalPath}" not found. Searched at: ${includePath}`);
+      }
+    };
+  }
   #buildLayout() {
     const layout = this.page.layout ?? this.page.parent?.childLayout ?? this.config.site.defaultLayout;
     const fullPath = path2.join(this.config.site.srcPath, "layouts", `${layout}.ejs`);
     const source = fse.readFileSync(fullPath, { encoding: "utf8" });
     const renderData = { ...this.renderData, contents: this.#contents };
-    this.#layout = ejs.render(source, renderData, { filename: fullPath });
+    this.#layout = ejs.render(source, renderData, {
+      filename: fullPath,
+      includer: this.#createLayoutIncluder(fullPath)
+    });
     this.#contents = {};
   }
   #writeFile() {
