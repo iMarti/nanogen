@@ -259,7 +259,8 @@ function build(config) {
 }
 
 // scripts/cli.ts
-import liveServer from "live-server";
+import * as http from "http";
+import handler from "serve-handler";
 import * as chokidar from "chokidar";
 import lodash3 from "lodash";
 var getBoolArg = (argv, abbr, full) => argv.includes(`-${abbr}`) || argv.includes(`--${full}`);
@@ -283,11 +284,13 @@ var watch2 = (config) => {
 };
 var serve = (config, port) => {
   console.log(`Starting local server at http://localhost:${port}`);
-  liveServer.start({
-    port,
-    root: config.site.distPath,
-    open: false,
-    logLevel: 0
+  const server = http.createServer(
+    (req, res) => handler(req, res, {
+      public: config.site.distPath
+    })
+  );
+  server.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
   });
 };
 var defaultSiteConfig = {

@@ -5,7 +5,8 @@ import { pathToFileURL } from 'url';
 import fse from 'fs-extra';
 import { build } from './page-builder.js';
 import type { IConfig, IPage, ISiteConfig, IPageMeta, ISitemapConfig } from './interfaces.js';
-import liveServer from 'live-server';
+import * as http from 'http';
+import handler from 'serve-handler';
 import * as chokidar from 'chokidar';
 import lodash from 'lodash';
 
@@ -46,11 +47,13 @@ const watch = (config: IConfig): void => {
  */
 const serve = (config: IConfig, port: number): void => {
 	console.log(`Starting local server at http://localhost:${port}`);
-	liveServer.start({
-		port,
-		root: config.site.distPath,
-		open: false,
-		logLevel: 0
+	const server = http.createServer((req, res) =>
+		handler(req, res, {
+			public: config.site.distPath
+		})
+	);
+	server.listen(port, () => {
+		console.log(`Server running at http://localhost:${port}`);
 	});
 };
 

@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "node nanogen.js",
-    "compile": "esbuild scripts/cli.ts --bundle --platform=node --outfile=nanogen.js --format=esm --external:chokidar --external:ejs --external:fs-extra --external:glob --external:json5 --external:live-server --external:lodash --external:marked --external:urijs",
+    "compile": "esbuild scripts/cli.ts --bundle --platform=node --outfile=nanogen.js --format=esm --external:chokidar --external:ejs --external:fs-extra --external:glob --external:json5 --external:serve-handler --external:lodash --external:marked --external:urijs",
     "serve": "serve ./public",
     "prepare": "npm run compile"
   },
@@ -42,26 +42,24 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "chokidar": "^3.6.0",
+    "chokidar": "^5.0.0",
     "ejs": "^3.1.10",
     "fs-extra": "^11.2.0",
     "glob": "^10.3.10",
     "json5": "^2.2.3",
-    "live-server": "^1.2.2",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "marked": "^4.3.0",
+    "serve-handler": "^6.1.6",
     "urijs": "^1.19.11"
   },
   "devDependencies": {
     "@types/ejs": "^3.1.5",
     "@types/fs-extra": "^11.0.4",
-    "@types/live-server": "^1.2.3",
     "@types/lodash": "^4.17.21",
     "@types/marked": "^5.0.2",
     "@types/node": "^20.0.0",
     "@types/urijs": "^1.19.26",
     "esbuild": "^0.27.2",
-    "nanogen": "file:nanogen-0.0.2.tgz",
     "typescript": "^5.9.3"
   }
 }
