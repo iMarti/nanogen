@@ -1,18 +1,44 @@
 {
   "name": "nanogen",
   "version": "0.0.2",
-  "description": "",
+  "description": "Minimal static site generator CLI for Node.js",
   "type": "module",
-  "main": "index.js",
+  "main": "nanogen.js",
+  "exports": {
+    ".": "./nanogen.js"
+  },
+  "types": "types/index.d.ts",
+  "files": [
+    "nanogen.js",
+    "types",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
   "bin": {
     "nanogen": "./nanogen.js"
   },
   "scripts": {
     "build": "node nanogen.js",
     "compile": "esbuild scripts/cli.ts --bundle --platform=node --outfile=nanogen.js --format=esm --external:chokidar --external:ejs --external:fs-extra --external:glob --external:json5 --external:live-server --external:lodash --external:marked --external:urijs",
-    "serve": "serve ./public"
+    "serve": "serve ./public",
+    "prepare": "npm run compile"
   },
-  "keywords": [],
+  "keywords": [
+    "static-site-generator",
+    "markdown",
+    "ejs",
+    "cli",
+    "ssg"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/doug2k1/nanogen.git"
+  },
+  "homepage": "https://github.com/doug2k1/nanogen#readme",
+  "bugs": {
+    "url": "https://github.com/doug2k1/nanogen/issues"
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -35,6 +61,7 @@
     "@types/node": "^20.0.0",
     "@types/urijs": "^1.19.26",
     "esbuild": "^0.27.2",
+    "nanogen": "file:nanogen-0.0.2.tgz",
     "typescript": "^5.9.3"
   }
 }

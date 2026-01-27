@@ -1,6 +1,7 @@
 import * as path from 'path';
 import URI from 'urijs';
 import { IPage, IPageMeta, IConfig, ISiteConfig } from './interfaces.js';
+import lodash from 'lodash';
 
 /**
  * Represents a page in the site
@@ -49,7 +50,7 @@ class Page implements IPage {
 		this.parent = Page.pages.all.find(p => this.isParent(p))!;
 	}
 	public bindChildren(): void {
-		this.children = Page.pages.all.filter(page => page.parent === this);
+		this.children = lodash.sortBy(Page.pages.all.filter(page => page.parent === this), p => p.id || p.url);
 
 		this.children.forEach(child => child.siblings = this.children);
 

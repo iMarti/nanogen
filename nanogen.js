@@ -2,6 +2,7 @@
 
 // scripts/cli.ts
 import * as path3 from "path";
+import { pathToFileURL } from "url";
 import fse2 from "fs-extra";
 
 // scripts/page-builder.ts
@@ -11,6 +12,7 @@ import * as path2 from "path";
 // scripts/page.ts
 import * as path from "path";
 import URI from "urijs";
+import lodash from "lodash";
 var Page = class _Page {
   /**
    * Create a new Page instance
@@ -34,7 +36,7 @@ var Page = class _Page {
     this.parent = _Page.pages.all.find((p) => this.isParent(p));
   }
   bindChildren() {
-    this.children = _Page.pages.all.filter((page) => page.parent === this);
+    this.children = lodash.sortBy(_Page.pages.all.filter((page) => page.parent === this), (p) => p.id || p.url);
     this.children.forEach((child) => child.siblings = this.children);
     if (!this.parent)
       this.siblings = [];
@@ -112,7 +114,7 @@ var Page = class _Page {
 import * as glob from "glob";
 import * as ejs from "ejs";
 import { marked } from "marked";
-import lodash from "lodash";
+import lodash2 from "lodash";
 import json5 from "json5";
 var Build = class {
   /**
@@ -240,7 +242,7 @@ function build(config) {
   builds = builds.filter((build2) => {
     const isPublished = build2.page.isPublished();
     if (!isPublished) {
-      lodash.remove(Page.pages.all, build2.page);
+      lodash2.remove(Page.pages.all, build2.page);
     }
     return isPublished;
   });
@@ -259,20 +261,21 @@ function build(config) {
 // scripts/cli.ts
 import liveServer from "live-server";
 import * as chokidar from "chokidar";
-import lodash2 from "lodash";
-var args = process.argv.slice(2);
-var configFileName = args.find((arg) => !arg.startsWith("-")) ?? "site.config.js";
-var getBoolArg = (abbr, full) => args.includes(`-${abbr}`) || args.includes(`--${full}`);
-var getIntArg = (abbr, full, defaultValue) => {
-  const abbrIndex = args.indexOf(`-${abbr}`);
-  const fullIndex = args.indexOf(`--${full}`);
+import lodash3 from "lodash";
+var getBoolArg = (argv, abbr, full) => argv.includes(`-${abbr}`) || argv.includes(`--${full}`);
+var getIntArg = (argv, abbr, full, defaultValue) => {
+  const abbrIndex = argv.indexOf(`-${abbr}`);
+  const fullIndex = argv.indexOf(`--${full}`);
   const pos = abbrIndex !== -1 ? abbrIndex : fullIndex;
-  return pos !== -1 && pos + 1 < args.length ? +args[pos + 1] : defaultValue;
+  return pos !== -1 && pos + 1 < argv.length ? +argv[pos + 1] : defaultValue;
+};
+var pickConfigFile = (argv) => argv.find((arg) => !arg.startsWith("-")) ?? "site.config.js";
+var createLogger = (verbose) => verbose ? console.log : () => {
 };
 var watch2 = (config) => {
   chokidar.watch(config.site.srcPath).on(
     "all",
-    lodash2.debounce(() => {
+    lodash3.debounce(() => {
       build(config);
       console.log("Waiting for changes...");
     }, 500)
@@ -295,7 +298,11 @@ var defaultSiteConfig = {
   indexPageName: "index",
   defaultLayout: "default"
 };
-if (getBoolArg("h", "help")) {
+var loadConfig = async (configFile) => {
+  const module = await import(pathToFileURL(configFile).href);
+  return module.default;
+};
+var printHelp = () => {
   console.log(`
 Usage
   $ nanogen [config-file] [...options]
@@ -304,20 +311,46 @@ Options
   -w, --watch     Start local server and watch for file changes
   -p, --port      Port to use for local server (default: 3000)
   -h, --help      Display this help text
+  -v, --verbose   Enable verbose logging
 `);
-} else {
+};
+var runNanogen = async (argv = process.argv.slice(2)) => {
+  const verbose = getBoolArg(argv, "v", "verbose");
+  const log = createLogger(verbose);
+  if (getBoolArg(argv, "h", "help")) {
+    printHelp();
+    return;
+  }
+  const configFileName = pickConfigFile(argv);
   const configFile = path3.resolve(configFileName);
+  log(`Using configuration file: ${configFileName} resolved to: ${configFile}`);
   if (!fse2.existsSync(configFile)) {
     throw new Error(`The configuration file "${configFile}" is missing`);
   }
-  const config = (await import(configFile)).default;
+  const config = await loadConfig(configFile);
   config.site = { ...defaultSiteConfig, ...config.site };
-  if (getBoolArg("w", "watch")) {
+  log("Site configuration:", config.site.srcPath, config.site.distPath, config.site.rootUrl);
+  if (getBoolArg(argv, "w", "watch")) {
     watch2(config);
-  } else if (getBoolArg("s", "serve")) {
-    const port = getIntArg("p", "port", 3e3);
+  } else if (getBoolArg(argv, "s", "serve")) {
+    const port = getIntArg(argv, "p", "port", 3e3);
     serve(config, port);
   } else {
     build(config);
   }
+};
+var isExecutedDirectly = () => import.meta.url === pathToFileURL(process.argv[1] ?? "").href;
+if (isExecutedDirectly()) {
+  runNanogen().catch((err) => {
+    console.error(err);
+    process.exitCode = 1;
+  });
 }
+export {
+  Page,
+  build,
+  defaultSiteConfig,
+  runNanogen,
+  serve,
+  watch2 as watch
+};

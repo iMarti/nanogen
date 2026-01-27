@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import * as path from 'path';
+import { pathToFileURL } from 'url';
 import fse from 'fs-extra';
-import { build, IConfig } from './page-builder.js';
-import { ISiteConfig } from './interfaces.js';
+import { build } from './page-builder.js';
+import type { IConfig, IPage, ISiteConfig, IPageMeta, ISitemapConfig } from './interfaces.js';
 import liveServer from 'live-server';
 import * as chokidar from 'chokidar';
 import lodash from 'lodash';
@@ -11,35 +12,18 @@ import lodash from 'lodash';
 /**
  * Parsed command-line arguments
  */
-const args = process.argv.slice(2);
+const getBoolArg = (argv: readonly string[], abbr: string, full: string): boolean =>
+	argv.includes(`-${abbr}`) || argv.includes(`--${full}`);
 
-/**
- * Determine the config file name from arguments
- */
-const configFileName = args.find(arg => !arg.startsWith('-')) ?? 'site.config.js';
-
-/**
- * Check if a boolean flag is present
- * @param abbr Short flag (e.g., 'h')
- * @param full Long flag (e.g., 'help')
- * @returns True if flag is present
- */
-const getBoolArg = (abbr: string, full: string): boolean =>
-	args.includes(`-${abbr}`) || args.includes(`--${full}`);
-
-/**
- * Get an integer argument value
- * @param abbr Short flag
- * @param full Long flag
- * @param defaultValue Default value if not found
- * @returns The parsed integer value
- */
-const getIntArg = (abbr: string, full: string, defaultValue: number): number => {
-	const abbrIndex = args.indexOf(`-${abbr}`);
-	const fullIndex = args.indexOf(`--${full}`);
+const getIntArg = (argv: readonly string[], abbr: string, full: string, defaultValue: number): number => {
+	const abbrIndex = argv.indexOf(`-${abbr}`);
+	const fullIndex = argv.indexOf(`--${full}`);
 	const pos = abbrIndex !== -1 ? abbrIndex : fullIndex;
-	return pos !== -1 && pos + 1 < args.length ? +args[pos + 1] : defaultValue;
+	return pos !== -1 && pos + 1 < argv.length ? +argv[pos + 1] : defaultValue;
 };
+
+const pickConfigFile = (argv: readonly string[]): string => argv.find(arg => !arg.startsWith('-')) ?? 'site.config.js';
+const createLogger = (verbose: boolean) => verbose ? console.log : () => { };
 
 /**
  * Start watching for file changes and rebuild automatically
@@ -82,7 +66,12 @@ const defaultSiteConfig: ISiteConfig = {
 	defaultLayout: 'default'
 } satisfies ISiteConfig;
 
-if (getBoolArg('h', 'help')) {
+const loadConfig = async (configFile: string): Promise<IConfig> => {
+	const module = await import(pathToFileURL(configFile).href);
+	return module.default as IConfig;
+};
+
+const printHelp = (): void => {
 	console.log(`
 Usage
   $ nanogen [config-file] [...options]
@@ -91,25 +80,50 @@ Options
   -w, --watch     Start local server and watch for file changes
   -p, --port      Port to use for local server (default: 3000)
   -h, --help      Display this help text
+  -v, --verbose   Enable verbose logging
 `);
-} else {
-	// load config file
+};
+
+const runNanogen = async (argv: string[] = process.argv.slice(2)): Promise<void> => {
+	const verbose = getBoolArg(argv, 'v', 'verbose');
+	const log = createLogger(verbose);
+
+	if (getBoolArg(argv, 'h', 'help')) {
+		printHelp();
+		return;
+	}
+
+	const configFileName = pickConfigFile(argv);
 	const configFile = path.resolve(configFileName);
+	log(`Using configuration file: ${configFileName} resolved to: ${configFile}`);
+
 	if (!fse.existsSync(configFile)) {
 		throw new Error(`The configuration file "${configFile}" is missing`);
 	}
 
-	const config: IConfig = (await import(configFile)).default;
-
-	// Merge with defaults
+	const config = await loadConfig(configFile);
 	config.site = { ...defaultSiteConfig, ...config.site };
+	log('Site configuration:', config.site.srcPath, config.site.distPath, config.site.rootUrl);
 
-	if (getBoolArg('w', 'watch')) {
+	if (getBoolArg(argv, 'w', 'watch')) {
 		watch(config);
-	} else if (getBoolArg('s', 'serve')) {
-		const port = getIntArg('p', 'port', 3000);
+	} else if (getBoolArg(argv, 's', 'serve')) {
+		const port = getIntArg(argv, 'p', 'port', 3000);
 		serve(config, port);
 	} else {
 		build(config);
 	}
+};
+
+const isExecutedDirectly = (): boolean => import.meta.url === pathToFileURL(process.argv[1] ?? '').href;
+
+if (isExecutedDirectly()) {
+	runNanogen().catch(err => {
+		console.error(err);
+		process.exitCode = 1;
+	});
 }
+
+export { build, watch, serve, defaultSiteConfig, runNanogen };
+export { Page } from './page.js';
+export type { IConfig, IPage, ISiteConfig, IPageMeta, ISitemapConfig };
