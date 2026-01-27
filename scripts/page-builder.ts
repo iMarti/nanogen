@@ -104,17 +104,14 @@ class Build {
 				return partSource;
 		}
 	}
-	#createIncluder() {
+	#createIncludeResolver(baseDir: string) {
 		return (originalPath: string, parsedPath: string) => {
-			// EJS resolves relative paths relative to the template file
-			const templateDir = path.dirname(path.join(this.config.site.srcPath, 'pages', parsedPath || this.pathname));
-			
 			// Try different extensions like EJS does
 			const extensions = ['', '.ejs', '.html', '.md', '.js'];
 			let includePath: string | null = null;
 			
 			for (const ext of extensions) {
-				const candidate = path.resolve(templateDir, originalPath + ext);
+				const candidate = path.resolve(baseDir, originalPath + ext);
 				if (fse.existsSync(candidate)) {
 					includePath = candidate;
 					break;
@@ -122,44 +119,43 @@ class Build {
 			}
 			
 			if (!includePath) {
-				includePath = path.resolve(templateDir, originalPath);
+				includePath = path.resolve(baseDir, originalPath);
 			}
 			
 			try {
-				const content = fse.readFileSync(includePath, 'utf8');
-				return { content, filename: includePath };
+				let content = fse.readFileSync(includePath, 'utf8');
+				let finalPath = includePath;
+				
+				// Process Markdown files
+				if (includePath.endsWith('.md')) {
+					content = marked(content);
+					// Create a temporary file with processed content
+					const tempDir = path.join(this.config.site.srcPath, 'temp');
+					fse.ensureDirSync(tempDir);
+					finalPath = path.join(tempDir, path.basename(includePath, '.md') + '.html');
+					fse.writeFileSync(finalPath, content);
+				}
+				
+				return { content: content, filename: finalPath };
 			} catch (err) {
 				throw new Error(`EJS include failed: "${originalPath}" not found. Searched at: ${includePath}`);
 			}
 		};
 	}
+
+	#createIncluder() {
+		return (originalPath: string, parsedPath: string) => {
+			// EJS resolves relative paths relative to the template file
+			const templateDir = path.dirname(path.join(this.config.site.srcPath, 'pages', parsedPath || this.pathname));
+			return this.#createIncludeResolver(templateDir)(originalPath, parsedPath);
+		};
+	}
+
 	#createLayoutIncluder(layoutPath: string) {
 		return (originalPath: string, parsedPath: string) => {
 			// For layouts, always resolve relative to the layouts directory
 			const layoutsDir = path.join(this.config.site.srcPath, 'layouts');
-			
-			// Try different extensions like EJS does
-			const extensions = ['', '.ejs', '.html', '.js'];
-			let includePath: string | null = null;
-			
-			for (const ext of extensions) {
-				const candidate = path.resolve(layoutsDir, originalPath + ext);
-				if (fse.existsSync(candidate)) {
-					includePath = candidate;
-					break;
-				}
-			}
-			
-			if (!includePath) {
-				includePath = path.resolve(layoutsDir, originalPath);
-			}
-			
-			try {
-				const content = fse.readFileSync(includePath, 'utf8');
-				return { content, filename: includePath };
-			} catch (err) {
-				throw new Error(`EJS include failed: "${originalPath}" not found. Searched at: ${includePath}`);
-			}
+			return this.#createIncludeResolver(layoutsDir)(originalPath, parsedPath);
 		};
 	}
 	#buildLayout(): void {
