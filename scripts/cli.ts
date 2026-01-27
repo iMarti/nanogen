@@ -22,7 +22,7 @@ const getIntArg = (argv: readonly string[], abbr: string, full: string, defaultV
 	return pos !== -1 && pos + 1 < argv.length ? +argv[pos + 1] : defaultValue;
 };
 
-const pickConfigFile = (argv: readonly string[]): string => argv.find(arg => !arg.startsWith('-')) ?? 'site.config.js';
+const pickConfigFile = (argv: readonly string[]): string => argv.find(arg => !arg.startsWith('-')) ?? 'nanogen.config.js';
 const createLogger = (verbose: boolean) => verbose ? console.log : () => { };
 
 /**
@@ -75,7 +75,7 @@ const printHelp = (): void => {
 	console.log(`
 Usage
   $ nanogen [config-file] [...options]
-  The config file parameter defaults to 'site.config.js' if not informed.
+  The config file parameter defaults to 'nanogen.config.js' if not informed.
 Options
   -w, --watch     Start local server and watch for file changes
   -p, --port      Port to use for local server (default: 3000)
@@ -115,13 +115,18 @@ const runNanogen = async (argv: string[] = process.argv.slice(2)): Promise<void>
 	}
 };
 
-const isExecutedDirectly = (): boolean => import.meta.url === pathToFileURL(process.argv[1] ?? '').href;
-
-if (isExecutedDirectly()) {
-	runNanogen().catch(err => {
-		console.error(err);
-		process.exitCode = 1;
-	});
+// Run CLI only if not imported as a module
+// In ESM, check if this file is the main entry point
+if (import.meta.url.startsWith('file://')) {
+	const isCLI = process.argv[1]?.endsWith('nanogen.js') || 
+	              process.argv[1]?.endsWith('nanogen');
+	
+	if (isCLI) {
+		runNanogen().catch(err => {
+			console.error(err);
+			process.exitCode = 1;
+		});
+	}
 }
 
 export { build, watch, serve, defaultSiteConfig, runNanogen };

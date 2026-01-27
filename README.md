@@ -61,7 +61,7 @@ The npm scripts above allow you to:
 Create the following structure in your project:
 ```
 my-project/
-├── site.config.js          # Site configuration
+├── nanogen.config.js      # Site configuration
 ├── src/
 │   ├── assets/            # Static assets (CSS, images, etc.)
 │   │   ├── css/
@@ -76,7 +76,7 @@ my-project/
 
 ### Configuration
 
-Create a `site.config.js` in your project root:
+Create a `nanogen.config.js` in your project root:
 ```js
 export default {
 	pageMetaDefault: {
@@ -130,8 +130,8 @@ npm run serve
 
 You can also run NanoGen directly with npx if needed:
 ```console
-npx nanogen -h              # View all options
-npx nanogen site.config.js  # Build with custom config file
+npx nanogen -h                 # View all options
+npx nanogen nanogen.config.js  # Build with custom config file
 ```
 
 ### Deployment
@@ -172,7 +172,7 @@ Go to the indicated URL in a browser to see the generated site.
 
 ## Configuration
 
-All the configurable values are in `site.config.js`.
+All the configurable values are in `nanogen.config.js`.
 
 The properties of `pageMetaDefault` will be assigned to each page then overriden by meta data if present.
 

@@ -269,7 +269,7 @@ var getIntArg = (argv, abbr, full, defaultValue) => {
   const pos = abbrIndex !== -1 ? abbrIndex : fullIndex;
   return pos !== -1 && pos + 1 < argv.length ? +argv[pos + 1] : defaultValue;
 };
-var pickConfigFile = (argv) => argv.find((arg) => !arg.startsWith("-")) ?? "site.config.js";
+var pickConfigFile = (argv) => argv.find((arg) => !arg.startsWith("-")) ?? "nanogen.config.js";
 var createLogger = (verbose) => verbose ? console.log : () => {
 };
 var watch2 = (config) => {
@@ -306,7 +306,7 @@ var printHelp = () => {
   console.log(`
 Usage
   $ nanogen [config-file] [...options]
-  The config file parameter defaults to 'site.config.js' if not informed.
+  The config file parameter defaults to 'nanogen.config.js' if not informed.
 Options
   -w, --watch     Start local server and watch for file changes
   -p, --port      Port to use for local server (default: 3000)
@@ -339,12 +339,14 @@ var runNanogen = async (argv = process.argv.slice(2)) => {
     build(config);
   }
 };
-var isExecutedDirectly = () => import.meta.url === pathToFileURL(process.argv[1] ?? "").href;
-if (isExecutedDirectly()) {
-  runNanogen().catch((err) => {
-    console.error(err);
-    process.exitCode = 1;
-  });
+if (import.meta.url.startsWith("file://")) {
+  const isCLI = process.argv[1]?.endsWith("nanogen.js") || process.argv[1]?.endsWith("nanogen");
+  if (isCLI) {
+    runNanogen().catch((err) => {
+      console.error(err);
+      process.exitCode = 1;
+    });
+  }
 }
 export {
   Page,
