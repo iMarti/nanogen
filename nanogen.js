@@ -189,9 +189,10 @@ var Build = class {
   #buildContent(partSource) {
     switch (this.page.parsedPath.ext) {
       case ".ejs":
-        return ejs.render(partSource, this.renderData, {
-          filename: this.pathname,
-          includer: this.#createIncluder()
+        const templateDir = path2.dirname(path2.join(this.config.site.srcPath, "pages", this.pathname));
+        const processedSource = this.#preprocessEjsIncludes(partSource, templateDir);
+        return ejs.render(processedSource, this.renderData, {
+          filename: this.pathname
         });
       case ".md":
         return marked(partSource);
@@ -199,56 +200,41 @@ var Build = class {
         return partSource;
     }
   }
-  #createIncludeResolver(baseDir) {
-    return (originalPath, parsedPath) => {
-      const extensions = ["", ".ejs", ".html", ".md", ".js"];
-      let includePath = null;
-      for (const ext of extensions) {
-        const candidate = path2.resolve(baseDir, originalPath + ext);
-        if (fse.existsSync(candidate)) {
-          includePath = candidate;
-          break;
-        }
-      }
-      if (!includePath) {
-        includePath = path2.resolve(baseDir, originalPath);
-      }
+  #preprocessEjsIncludes(source, baseDir) {
+    const includeRegex = /<%-\s*include\(['"]([^'"]+)['"]\)\s*%>/g;
+    return source.replace(includeRegex, (match, includePath) => {
       try {
-        let content = fse.readFileSync(includePath, "utf8");
-        let finalPath = includePath;
-        if (includePath.endsWith(".md")) {
-          content = marked(content);
-          const tempDir = path2.join(this.config.site.srcPath, "temp");
-          fse.ensureDirSync(tempDir);
-          finalPath = path2.join(tempDir, path2.basename(includePath, ".md") + ".html");
-          fse.writeFileSync(finalPath, content);
+        const extensions = ["", ".ejs", ".html", ".md", ".js"];
+        let resolvedPath = null;
+        for (const ext of extensions) {
+          const candidate = path2.resolve(baseDir, includePath + ext);
+          if (fse.existsSync(candidate)) {
+            resolvedPath = candidate;
+            break;
+          }
         }
-        return { content, filename: finalPath };
+        if (!resolvedPath) {
+          resolvedPath = path2.resolve(baseDir, includePath);
+        }
+        let content = fse.readFileSync(resolvedPath, "utf8");
+        if (resolvedPath.endsWith(".md")) {
+          content = marked(content);
+        }
+        return content.replace(/<%/g, "<%%").replace(/%>/g, "%%>");
       } catch (err) {
-        throw new Error(`EJS include failed: "${originalPath}" not found. Searched at: ${includePath}`);
+        throw new Error(`EJS include failed: "${includePath}" not found. Searched in: ${baseDir}`);
       }
-    };
-  }
-  #createIncluder() {
-    return (originalPath, parsedPath) => {
-      const templateDir = path2.dirname(path2.join(this.config.site.srcPath, "pages", parsedPath || this.pathname));
-      return this.#createIncludeResolver(templateDir)(originalPath, parsedPath);
-    };
-  }
-  #createLayoutIncluder(layoutPath) {
-    return (originalPath, parsedPath) => {
-      const layoutsDir = path2.join(this.config.site.srcPath, "layouts");
-      return this.#createIncludeResolver(layoutsDir)(originalPath, parsedPath);
-    };
+    });
   }
   #buildLayout() {
     const layout = this.page.layout ?? this.page.parent?.childLayout ?? this.config.site.defaultLayout;
     const fullPath = path2.join(this.config.site.srcPath, "layouts", `${layout}.ejs`);
-    const source = fse.readFileSync(fullPath, { encoding: "utf8" });
+    let source = fse.readFileSync(fullPath, { encoding: "utf8" });
+    const layoutsDir = path2.join(this.config.site.srcPath, "layouts");
+    source = this.#preprocessEjsIncludes(source, layoutsDir);
     const renderData = { ...this.renderData, contents: this.#contents };
     this.#layout = ejs.render(source, renderData, {
-      filename: fullPath,
-      includer: this.#createLayoutIncluder(fullPath)
+      filename: fullPath
     });
     this.#contents = {};
   }

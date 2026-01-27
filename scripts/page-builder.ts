@@ -94,9 +94,11 @@ class Build {
 	#buildContent(partSource: string): string {
 		switch (this.page.parsedPath.ext) {
 			case '.ejs':
-				return ejs.render(partSource, this.renderData, {
-					filename: this.pathname,
-					includer: this.#createIncluder()
+				// Pre-process includes in EJS content
+				const templateDir = path.dirname(path.join(this.config.site.srcPath, 'pages', this.pathname));
+				const processedSource = this.#preprocessEjsIncludes(partSource, templateDir);
+				return ejs.render(processedSource, this.renderData, {
+					filename: this.pathname
 				});
 			case '.md':
 				return marked(partSource);
@@ -104,72 +106,58 @@ class Build {
 				return partSource;
 		}
 	}
-	#createIncludeResolver(baseDir: string) {
-		return (originalPath: string, parsedPath: string) => {
-			// Try different extensions like EJS does
-			const extensions = ['', '.ejs', '.html', '.md', '.js'];
-			let includePath: string | null = null;
-			
-			for (const ext of extensions) {
-				const candidate = path.resolve(baseDir, originalPath + ext);
-				if (fse.existsSync(candidate)) {
-					includePath = candidate;
-					break;
-				}
-			}
-			
-			if (!includePath) {
-				includePath = path.resolve(baseDir, originalPath);
-			}
-			
+	#preprocessEjsIncludes(source: string, baseDir: string): string {
+		// Match <%- include('path') %> patterns
+		const includeRegex = /<%-\s*include\(['"]([^'"]+)['"]\)\s*%>/g;
+		
+		return source.replace(includeRegex, (match, includePath) => {
 			try {
-				let content = fse.readFileSync(includePath, 'utf8');
-				let finalPath = includePath;
+				// Try different extensions like EJS does
+				const extensions = ['', '.ejs', '.html', '.md', '.js'];
+				let resolvedPath: string | null = null;
+				
+				for (const ext of extensions) {
+					const candidate = path.resolve(baseDir, includePath + ext);
+					if (fse.existsSync(candidate)) {
+						resolvedPath = candidate;
+						break;
+					}
+				}
+				
+				if (!resolvedPath) {
+					resolvedPath = path.resolve(baseDir, includePath);
+				}
+				
+				let content = fse.readFileSync(resolvedPath, 'utf8');
 				
 				// Process Markdown files
-				if (includePath.endsWith('.md')) {
+				if (resolvedPath.endsWith('.md')) {
 					content = marked(content);
-					// Create a temporary file with processed content
-					const tempDir = path.join(this.config.site.srcPath, 'temp');
-					fse.ensureDirSync(tempDir);
-					finalPath = path.join(tempDir, path.basename(includePath, '.md') + '.html');
-					fse.writeFileSync(finalPath, content);
 				}
 				
-				return { content: content, filename: finalPath };
+				// Escape the content for safe inclusion in EJS
+				return content.replace(/<%/g, '<%%').replace(/%>/g, '%%>');
 			} catch (err) {
-				throw new Error(`EJS include failed: "${originalPath}" not found. Searched at: ${includePath}`);
+				throw new Error(`EJS include failed: "${includePath}" not found. Searched in: ${baseDir}`);
 			}
-		};
+		});
 	}
 
-	#createIncluder() {
-		return (originalPath: string, parsedPath: string) => {
-			// EJS resolves relative paths relative to the template file
-			const templateDir = path.dirname(path.join(this.config.site.srcPath, 'pages', parsedPath || this.pathname));
-			return this.#createIncludeResolver(templateDir)(originalPath, parsedPath);
-		};
-	}
-
-	#createLayoutIncluder(layoutPath: string) {
-		return (originalPath: string, parsedPath: string) => {
-			// For layouts, always resolve relative to the layouts directory
-			const layoutsDir = path.join(this.config.site.srcPath, 'layouts');
-			return this.#createIncludeResolver(layoutsDir)(originalPath, parsedPath);
-		};
-	}
 	#buildLayout(): void {
 		// The page layout is defined by order of priority on the page, its parent or on the site level.
 		const layout = this.page.layout ?? this.page.parent?.childLayout ?? this.config.site.defaultLayout;
 
 		const fullPath = path.join(this.config.site.srcPath, 'layouts', `${layout}.ejs`);
-		const source = fse.readFileSync(fullPath, { encoding: 'utf8' });
+		let source = fse.readFileSync(fullPath, { encoding: 'utf8' });
+
+		// Pre-process includes in layout
+		const layoutsDir = path.join(this.config.site.srcPath, 'layouts');
+		source = this.#preprocessEjsIncludes(source, layoutsDir);
 
 		const renderData = { ...this.renderData, contents: this.#contents };
 
 		this.#layout = ejs.render(source, renderData, {
-			filename: fullPath,
-			includer: this.#createLayoutIncluder(fullPath)
+			filename: fullPath
 		});
 
 		// Clear contents after processing
