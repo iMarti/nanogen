@@ -58,6 +58,7 @@
     "@types/lodash": "^4.17.21",
     "@types/marked": "^5.0.2",
     "@types/node": "^20.0.0",
+    "@types/serve-handler": "^6.1.4",
     "@types/urijs": "^1.19.26",
     "esbuild": "^0.27.2",
     "typescript": "^5.9.3"
