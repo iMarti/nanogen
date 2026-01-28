@@ -7,6 +7,7 @@ import fse2 from "fs-extra";
 
 // scripts/page-builder.ts
 import fse from "fs-extra";
+import fs from "fs";
 import * as path2 from "path";
 
 // scripts/page.ts
@@ -170,15 +171,16 @@ var Build = class {
   }
   /**
    * Build the page
+   * @returns true if file was written, false if skipped (unchanged)
    */
   build() {
     if (this.page.externalLink) {
-      return;
+      return false;
     }
     fse.mkdirsSync(this.#destPath);
     this.#buildContents();
     this.#buildLayout();
-    this.#writeFile();
+    return this.#writeFile();
   }
   #buildContents() {
     for (const partId in this.#parts) {
@@ -247,7 +249,14 @@ var Build = class {
     } else {
       destPathname = path2.join(this.#destPath, `${this.page.parsedPath.name}${this.config.site.outputExtension}`);
     }
+    if (fse.existsSync(destPathname)) {
+      const existingContent = fse.readFileSync(destPathname, "utf8");
+      if (existingContent === this.#layout) {
+        return false;
+      }
+    }
     fse.writeFileSync(destPathname, this.#layout);
+    return true;
   }
 };
 function buildSitemap(config, builds) {
@@ -263,13 +272,45 @@ function buildSitemap(config, builds) {
 ${tags.join("\n")}
 </urlset>`;
   const destPathname = path2.join(config.site.distPath, "sitemap.xml");
+  if (fse.existsSync(destPathname)) {
+    const existingContent = fse.readFileSync(destPathname, "utf8");
+    if (existingContent === content) {
+      return false;
+    }
+  }
   fse.writeFileSync(destPathname, content);
+  return true;
+}
+function copyAssetsIfChanged(srcPath, destPath) {
+  const assetsPath = path2.join(srcPath, "assets");
+  if (!fse.existsSync(assetsPath)) {
+    return { total: 0, skipped: 0 };
+  }
+  const assetFiles = glob.sync("**/*", { cwd: assetsPath, nodir: true });
+  let skipped = 0;
+  for (const file of assetFiles) {
+    const srcFile = path2.join(assetsPath, file);
+    const destFile = path2.join(destPath, file);
+    fse.mkdirpSync(path2.dirname(destFile));
+    if (fse.existsSync(destFile)) {
+      const srcContent = fs.readFileSync(srcFile);
+      const destContent = fs.readFileSync(destFile);
+      if (srcContent.equals(destContent)) {
+        skipped++;
+        continue;
+      }
+    }
+    fse.copyFileSync(srcFile, destFile);
+  }
+  return { total: assetFiles.length, skipped };
 }
 function build(config) {
   const startTime = process.hrtime();
   Page.pages = { all: [] };
-  fse.emptyDirSync(config.site.distPath);
-  fse.copySync(`${config.site.srcPath}/assets`, config.site.distPath);
+  if (config.site.clean) {
+    fse.emptyDirSync(config.site.distPath);
+  }
+  const assetCopy = copyAssetsIfChanged(config.site.srcPath, config.site.distPath);
   const pathnames = glob.sync("**/*.@(ejs|md|html)", { cwd: `${config.site.srcPath}/pages` });
   let builds = pathnames.map((pathname) => new Build(pathname, config));
   builds.forEach((build2) => build2.page.bindParent());
@@ -282,14 +323,25 @@ function build(config) {
   });
   builds.forEach((build2) => build2.page.storeById());
   builds.forEach((build2) => build2.page.bindChildren());
-  builds.forEach((build2) => build2.build());
+  const writeResults = builds.map((build2) => build2.build());
+  const skippedCount = builds.filter((build2, i) => !build2.page.externalLink && !writeResults[i]).length;
+  let sitemapSkipped = 0;
   if (config.sitemap) {
-    buildSitemap(config, builds);
+    const sitemapWritten = buildSitemap(config, builds);
+    if (!sitemapWritten) {
+      sitemapSkipped = 1;
+    }
   }
   const timeDiff = process.hrtime(startTime);
   const duration = timeDiff[0] * 1e3 + timeDiff[1] / 1e6;
   const round = (d) => Math.round(d * 10) / 10;
-  console.log(`${(/* @__PURE__ */ new Date()).toLocaleString()} Successfully built ${builds.length} pages in ${round(duration)} ms, ${round(duration / builds.length)} ms/page`);
+  const totalSkipped = skippedCount + assetCopy.skipped + sitemapSkipped;
+  const parts = [];
+  if (skippedCount > 0) parts.push(`${skippedCount} page${skippedCount !== 1 ? "s" : ""}`);
+  if (assetCopy.skipped > 0) parts.push(`${assetCopy.skipped} asset${assetCopy.skipped !== 1 ? "s" : ""}`);
+  if (sitemapSkipped > 0) parts.push("sitemap");
+  const skippedMsg = parts.length > 0 ? ` (${parts.join(", ")} unchanged)` : "";
+  console.log(`${(/* @__PURE__ */ new Date()).toLocaleString()} Successfully built ${builds.length} pages in ${round(duration)} ms, ${round(duration / builds.length)} ms/page${skippedMsg}`);
 }
 
 // scripts/cli.ts
@@ -347,6 +399,7 @@ Usage
 Options
   -w, --watch     Start local server and watch for file changes
   -p, --port      Port to use for local server (default: 3000)
+  -c, --clean     Clear output directory before building
   -h, --help      Display this help text
   -v, --verbose   Enable verbose logging
 `);
@@ -365,7 +418,8 @@ var runNanogen = async (argv = process.argv.slice(2)) => {
     throw new Error(`The configuration file "${configFile}" is missing`);
   }
   const config = await loadConfig(configFile);
-  config.site = { ...defaultSiteConfig, ...config.site };
+  const clean = getBoolArg(argv, "c", "clean");
+  config.site = { ...defaultSiteConfig, ...config.site, clean };
   log("Site configuration:", config.site.srcPath, config.site.distPath, config.site.rootUrl);
   if (getBoolArg(argv, "w", "watch")) {
     watch2(config);

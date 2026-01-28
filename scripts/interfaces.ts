@@ -39,6 +39,8 @@ interface ISiteConfig {
 	indexPageName?: string;
 	/** name of the default layout from the `/layouts/` folder */
 	defaultLayout?: string;
+	/** whether to clear the output directory before building, default is false */
+	clean?: boolean;
 };
 interface ISitemapConfig {
 	/**

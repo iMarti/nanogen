@@ -82,6 +82,7 @@ Usage
 Options
   -w, --watch     Start local server and watch for file changes
   -p, --port      Port to use for local server (default: 3000)
+  -c, --clean     Clear output directory before building
   -h, --help      Display this help text
   -v, --verbose   Enable verbose logging
 `);
@@ -105,7 +106,8 @@ const runNanogen = async (argv: string[] = process.argv.slice(2)): Promise<void>
 	}
 
 	const config = await loadConfig(configFile);
-	config.site = { ...defaultSiteConfig, ...config.site };
+	const clean = getBoolArg(argv, 'c', 'clean');
+	config.site = { ...defaultSiteConfig, ...config.site, clean };
 	log('Site configuration:', config.site.srcPath, config.site.distPath, config.site.rootUrl);
 
 	if (getBoolArg(argv, 'w', 'watch')) {
