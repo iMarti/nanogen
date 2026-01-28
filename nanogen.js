@@ -117,6 +117,16 @@ import * as ejs from "ejs";
 import { marked } from "marked";
 import lodash2 from "lodash";
 import json5 from "json5";
+function writeFileIfChanged(filePath, content) {
+  if (fse.existsSync(filePath)) {
+    const existingContent = fse.readFileSync(filePath, "utf8");
+    if (existingContent === content) {
+      return false;
+    }
+  }
+  fse.writeFileSync(filePath, content);
+  return true;
+}
 var Build = class {
   /**
    * Create a new Build instance
@@ -249,14 +259,7 @@ var Build = class {
     } else {
       destPathname = path2.join(this.#destPath, `${this.page.parsedPath.name}${this.config.site.outputExtension}`);
     }
-    if (fse.existsSync(destPathname)) {
-      const existingContent = fse.readFileSync(destPathname, "utf8");
-      if (existingContent === this.#layout) {
-        return false;
-      }
-    }
-    fse.writeFileSync(destPathname, this.#layout);
-    return true;
+    return writeFileIfChanged(destPathname, this.#layout);
   }
 };
 function buildSitemap(config, builds) {
@@ -272,14 +275,7 @@ function buildSitemap(config, builds) {
 ${tags.join("\n")}
 </urlset>`;
   const destPathname = path2.join(config.site.distPath, "sitemap.xml");
-  if (fse.existsSync(destPathname)) {
-    const existingContent = fse.readFileSync(destPathname, "utf8");
-    if (existingContent === content) {
-      return false;
-    }
-  }
-  fse.writeFileSync(destPathname, content);
-  return true;
+  return writeFileIfChanged(destPathname, content);
 }
 function copyAssetsIfChanged(srcPath, destPath) {
   const assetsPath = path2.join(srcPath, "assets");

@@ -9,6 +9,23 @@ import lodash from 'lodash';
 import json5 from 'json5';
 
 /**
+ * Write file only if content has changed
+ * @param filePath Destination file path
+ * @param content New content to write
+ * @returns true if file was written, false if skipped
+ */
+function writeFileIfChanged(filePath: string, content: string): boolean {
+	if (fse.existsSync(filePath)) {
+		const existingContent = fse.readFileSync(filePath, 'utf8');
+		if (existingContent === content) {
+			return false; // Content is identical, skip write
+		}
+	}
+	fse.writeFileSync(filePath, content);
+	return true;
+}
+
+/**
  * Represents a page build process
  */
 class Build {
@@ -177,16 +194,7 @@ class Build {
 			destPathname = path.join(this.#destPath, `${this.page.parsedPath.name}${this.config.site.outputExtension}`);
 		}
 
-		// Only write if content has changed
-		if (fse.existsSync(destPathname)) {
-			const existingContent = fse.readFileSync(destPathname, 'utf8');
-			if (existingContent === this.#layout) {
-				return false; // Content is identical, skip write
-			}
-		}
-
-		fse.writeFileSync(destPathname, this.#layout);
-		return true;
+		return writeFileIfChanged(destPathname, this.#layout);
 	}
 }
 
@@ -210,17 +218,7 @@ ${tags.join('\n')}
 </urlset>`;
 
 	const destPathname = path.join(config.site.distPath, 'sitemap.xml');
-	
-	// Only write if content has changed
-	if (fse.existsSync(destPathname)) {
-		const existingContent = fse.readFileSync(destPathname, 'utf8');
-		if (existingContent === content) {
-			return false; // Content is identical, skip write
-		}
-	}
-	
-	fse.writeFileSync(destPathname, content);
-	return true;
+	return writeFileIfChanged(destPathname, content);
 }
 
 /**
