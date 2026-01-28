@@ -135,8 +135,9 @@ class Build {
 					content = marked(content);
 				}
 				
-				// Escape the content for safe inclusion in EJS
-				return content.replace(/<%/g, '<%%').replace(/%>/g, '%%>');
+				// Return content directly without escaping EJS tags
+				// This allows EJS variables in included files to be processed
+				return content;
 			} catch (err) {
 				throw new Error(`EJS include failed: "${includePath}" not found. Searched in: ${baseDir}`);
 			}

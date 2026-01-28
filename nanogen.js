@@ -220,7 +220,7 @@ var Build = class {
         if (resolvedPath.endsWith(".md")) {
           content = marked(content);
         }
-        return content.replace(/<%/g, "<%%").replace(/%>/g, "%%>");
+        return content;
       } catch (err) {
         throw new Error(`EJS include failed: "${includePath}" not found. Searched in: ${baseDir}`);
       }
