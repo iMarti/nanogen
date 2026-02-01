@@ -356,6 +356,7 @@ var pickConfigFile = (argv) => argv.find((arg) => !arg.startsWith("-")) ?? "nano
 var createLogger = (verbose) => verbose ? console.log : () => {
 };
 var watch2 = (config) => {
+  console.log(`Watching ${config.site.srcPath} for changes...`);
   chokidar.watch(config.site.srcPath).on(
     "all",
     lodash3.debounce(() => {
@@ -397,6 +398,7 @@ Options
   -p, --port      Port to use for local server (default: 3000)
   -c, --clean     Clear output directory before building
   -h, --help      Display this help text
+  -s, --serve     Start local server to serve the generated files
   -v, --verbose   Enable verbose logging
 `);
 };
@@ -417,13 +419,15 @@ var runNanogen = async (argv = process.argv.slice(2)) => {
   const clean = getBoolArg(argv, "c", "clean");
   config.site = { ...defaultSiteConfig, ...config.site, clean };
   log("Site configuration:", config.site.srcPath, config.site.distPath, config.site.rootUrl);
-  if (getBoolArg(argv, "w", "watch")) {
+  const shouldWatch = getBoolArg(argv, "w", "watch");
+  const shouldServe = getBoolArg(argv, "s", "serve");
+  build(config);
+  if (shouldWatch) {
     watch2(config);
-  } else if (getBoolArg(argv, "s", "serve")) {
+  }
+  if (shouldServe) {
     const port = getIntArg(argv, "p", "port", 3e3);
     serve(config, port);
-  } else {
-    build(config);
   }
 };
 if (import.meta.url.startsWith("file://")) {

@@ -31,13 +31,14 @@ const createLogger = (verbose: boolean) => verbose ? console.log : () => { };
  * @param config Site configuration
  */
 const watch = (config: IConfig): void => {
-	chokidar.watch(config.site.srcPath).on(
-		'all',
-		lodash.debounce(() => {
-			build(config);
-			console.log('Waiting for changes...');
-		}, 500)
-	);
+    console.log(`Watching ${config.site.srcPath} for changes...`);
+    chokidar.watch(config.site.srcPath).on(
+        'all',
+        lodash.debounce(() => {
+            build(config);
+            console.log('Waiting for changes...');
+        }, 500)
+    );
 };
 
 /**
@@ -84,40 +85,49 @@ Options
   -p, --port      Port to use for local server (default: 3000)
   -c, --clean     Clear output directory before building
   -h, --help      Display this help text
+  -s, --serve     Start local server to serve the generated files
   -v, --verbose   Enable verbose logging
 `);
 };
 
 const runNanogen = async (argv: string[] = process.argv.slice(2)): Promise<void> => {
-	const verbose = getBoolArg(argv, 'v', 'verbose');
-	const log = createLogger(verbose);
+    const verbose = getBoolArg(argv, 'v', 'verbose');
+    const log = createLogger(verbose);
 
-	if (getBoolArg(argv, 'h', 'help')) {
-		printHelp();
-		return;
-	}
+    if (getBoolArg(argv, 'h', 'help')) {
+        printHelp();
+        return;
+    }
 
-	const configFileName = pickConfigFile(argv);
-	const configFile = path.resolve(configFileName);
-	log(`Using configuration file: ${configFileName} resolved to: ${configFile}`);
+    const configFileName = pickConfigFile(argv);
+    const configFile = path.resolve(configFileName);
+    log(`Using configuration file: ${configFileName} resolved to: ${configFile}`);
 
-	if (!fse.existsSync(configFile)) {
-		throw new Error(`The configuration file "${configFile}" is missing`);
-	}
+    if (!fse.existsSync(configFile)) {
+        throw new Error(`The configuration file "${configFile}" is missing`);
+    }
 
-	const config = await loadConfig(configFile);
-	const clean = getBoolArg(argv, 'c', 'clean');
-	config.site = { ...defaultSiteConfig, ...config.site, clean };
-	log('Site configuration:', config.site.srcPath, config.site.distPath, config.site.rootUrl);
+    const config = await loadConfig(configFile);
+    const clean = getBoolArg(argv, 'c', 'clean');
+    config.site = { ...defaultSiteConfig, ...config.site, clean };
+    log('Site configuration:', config.site.srcPath, config.site.distPath, config.site.rootUrl);
 
-	if (getBoolArg(argv, 'w', 'watch')) {
-		watch(config);
-	} else if (getBoolArg(argv, 's', 'serve')) {
-		const port = getIntArg(argv, 'p', 'port', 3000);
-		serve(config, port);
-	} else {
-		build(config);
-	}
+    const shouldWatch = getBoolArg(argv, 'w', 'watch');
+    const shouldServe = getBoolArg(argv, 's', 'serve');
+
+    // Initial build
+    build(config);
+
+    // Start watch mode if requested
+    if (shouldWatch) {
+        watch(config);
+    }
+
+    // Start server if requested
+    if (shouldServe) {
+        const port = getIntArg(argv, 'p', 'port', 3000);
+        serve(config, port);
+    }
 };
 
 // Run CLI only if not imported as a module
