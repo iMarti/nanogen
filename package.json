@@ -1,6 +1,6 @@
 {
   "name": "nanogen",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Minimal static site generator CLI for Node.js",
   "type": "module",
   "main": "nanogen.js",
