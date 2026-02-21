@@ -1,94 +1,13 @@
 #!/usr/bin/env node
 
 import * as path from 'path';
-import { pathToFileURL } from 'url';
 import fse from 'fs-extra';
 import { build } from './page-builder.js';
 import type { IConfig, IPage, ISiteConfig, IPageMeta, ISitemapConfig } from './interfaces.js';
-import * as http from 'http';
-import handler from 'serve-handler';
-import * as chokidar from 'chokidar';
-import lodash from 'lodash';
-
-/**
- * Parsed command-line arguments
- */
-const getBoolArg = (argv: readonly string[], abbr: string, full: string): boolean =>
-	argv.includes(`-${abbr}`) || argv.includes(`--${full}`);
-
-const getIntArg = (argv: readonly string[], abbr: string, full: string, defaultValue: number): number => {
-	const abbrIndex = argv.indexOf(`-${abbr}`);
-	const fullIndex = argv.indexOf(`--${full}`);
-	const pos = abbrIndex !== -1 ? abbrIndex : fullIndex;
-	return pos !== -1 && pos + 1 < argv.length ? +argv[pos + 1] : defaultValue;
-};
-
-const pickConfigFile = (argv: readonly string[]): string => argv.find(arg => !arg.startsWith('-')) ?? 'nanogen.config.js';
-const createLogger = (verbose: boolean) => verbose ? console.log : () => { };
-
-/**
- * Start watching for file changes and rebuild automatically
- * @param config Site configuration
- */
-const watch = (config: IConfig): void => {
-    console.log(`Watching ${config.site.srcPath} for changes...`);
-    chokidar.watch(config.site.srcPath).on(
-        'all',
-        lodash.debounce(() => {
-            build(config);
-            console.log('Waiting for changes...');
-        }, 500)
-    );
-};
-
-/**
- * Start a local development server
- * @param config Site configuration
- * @param port Port number to listen on
- */
-const serve = (config: IConfig, port: number): void => {
-	console.log(`Starting local server at http://localhost:${port}`);
-	const server = http.createServer((req, res) =>
-		handler(req, res, {
-			public: config.site.distPath
-		})
-	);
-	server.listen(port, () => {
-		console.log(`Server running at http://localhost:${port}`);
-	});
-};
-
-/**
- * Default site configuration values
- */
-const defaultSiteConfig: ISiteConfig = {
-	rootUrl: '/',
-	metaSeparator: '!!!',
-	fileOutputMode: 'files',
-	outputExtension: '.html',
-	indexPageName: 'index',
-	defaultLayout: 'default'
-} satisfies ISiteConfig;
-
-const loadConfig = async (configFile: string): Promise<IConfig> => {
-	const module = await import(pathToFileURL(configFile).href);
-	return module.default as IConfig;
-};
-
-const printHelp = (): void => {
-	console.log(`
-Usage
-  $ nanogen [config-file] [...options]
-  The config file parameter defaults to 'nanogen.config.js' if not informed.
-Options
-  -w, --watch     Start local server and watch for file changes
-  -p, --port      Port to use for local server (default: 3000)
-  -c, --clean     Clear output directory before building
-  -h, --help      Display this help text
-  -s, --serve     Start local server to serve the generated files
-  -v, --verbose   Enable verbose logging
-`);
-};
+import { getBoolArg, getIntArg, pickConfigFile, createLogger, printHelp } from './lib/args.js';
+import { watch } from './lib/watch.js';
+import { serve } from './lib/server.js';
+import { defaultSiteConfig, loadConfig } from './lib/config.js';
 
 const runNanogen = async (argv: string[] = process.argv.slice(2)): Promise<void> => {
     const verbose = getBoolArg(argv, 'v', 'verbose');
@@ -118,15 +37,19 @@ const runNanogen = async (argv: string[] = process.argv.slice(2)): Promise<void>
     // Initial build
     build(config);
 
+    let reloadVersion = 0;
+
     // Start watch mode if requested
     if (shouldWatch) {
-        watch(config);
+        watch(config, () => {
+            reloadVersion += 1;
+        });
     }
 
     // Start server if requested
     if (shouldServe) {
         const port = getIntArg(argv, 'p', 'port', 3000);
-        serve(config, port);
+        serve(config, port, () => reloadVersion);
     }
 };
 

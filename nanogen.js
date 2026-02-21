@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
 // scripts/cli.ts
-import * as path3 from "path";
-import { pathToFileURL } from "url";
-import fse2 from "fs-extra";
+import * as path4 from "path";
+import fse3 from "fs-extra";
 
 // scripts/page-builder.ts
 import fse from "fs-extra";
@@ -340,11 +339,7 @@ function build(config) {
   console.log(`${(/* @__PURE__ */ new Date()).toLocaleString()} Successfully built ${builds.length} pages in ${round(duration)} ms, ${round(duration / builds.length)} ms/page${skippedMsg}`);
 }
 
-// scripts/cli.ts
-import * as http from "http";
-import handler from "serve-handler";
-import * as chokidar from "chokidar";
-import lodash3 from "lodash";
+// scripts/lib/args.ts
 var getBoolArg = (argv, abbr, full) => argv.includes(`-${abbr}`) || argv.includes(`--${full}`);
 var getIntArg = (argv, abbr, full, defaultValue) => {
   const abbrIndex = argv.indexOf(`-${abbr}`);
@@ -354,39 +349,6 @@ var getIntArg = (argv, abbr, full, defaultValue) => {
 };
 var pickConfigFile = (argv) => argv.find((arg) => !arg.startsWith("-")) ?? "nanogen.config.js";
 var createLogger = (verbose) => verbose ? console.log : () => {
-};
-var watch2 = (config) => {
-  console.log(`Watching ${config.site.srcPath} for changes...`);
-  chokidar.watch(config.site.srcPath).on(
-    "all",
-    lodash3.debounce(() => {
-      build(config);
-      console.log("Waiting for changes...");
-    }, 500)
-  );
-};
-var serve = (config, port) => {
-  console.log(`Starting local server at http://localhost:${port}`);
-  const server = http.createServer(
-    (req, res) => handler(req, res, {
-      public: config.site.distPath
-    })
-  );
-  server.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-  });
-};
-var defaultSiteConfig = {
-  rootUrl: "/",
-  metaSeparator: "!!!",
-  fileOutputMode: "files",
-  outputExtension: ".html",
-  indexPageName: "index",
-  defaultLayout: "default"
-};
-var loadConfig = async (configFile) => {
-  const module = await import(pathToFileURL(configFile).href);
-  return module.default;
 };
 var printHelp = () => {
   console.log(`
@@ -402,6 +364,167 @@ Options
   -v, --verbose   Enable verbose logging
 `);
 };
+
+// scripts/lib/watch.ts
+import * as chokidar from "chokidar";
+import lodash3 from "lodash";
+var watch2 = (config, onRebuild) => {
+  console.log(`Watching ${config.site.srcPath} for changes...`);
+  chokidar.watch(config.site.srcPath).on(
+    "all",
+    lodash3.debounce(() => {
+      build(config);
+      onRebuild?.();
+      console.log("Waiting for changes...");
+    }, 500)
+  );
+};
+
+// scripts/lib/server.ts
+import * as http from "http";
+import handler from "serve-handler";
+
+// scripts/lib/dev-reload.ts
+import * as path3 from "path";
+import fse2 from "fs-extra";
+var DEV_RELOAD_ENDPOINT = "/__nanogen_reload";
+var buildDevReloadScript = () => `
+<script>
+(() => {
+  const endpoint = '${DEV_RELOAD_ENDPOINT}';
+  let version = null;
+
+  const check = async () => {
+    try {
+      const response = await fetch(endpoint, { cache: 'no-store' });
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const nextVersion = Number(data?.version ?? 0);
+
+      if (version === null) {
+        version = nextVersion;
+        return;
+      }
+
+      if (nextVersion !== version) {
+        window.location.reload();
+      }
+    } catch (_) {
+      // ignore network errors during local development
+    }
+  };
+
+  check();
+  setInterval(check, 1000);
+})();
+</script>
+`;
+var injectDevReloadScript = (html) => {
+  const script = buildDevReloadScript();
+  if (html.includes(DEV_RELOAD_ENDPOINT)) {
+    return html;
+  }
+  const closeBodyTag = "</body>";
+  const bodyIndex = html.lastIndexOf(closeBodyTag);
+  if (bodyIndex === -1) {
+    return `${html}${script}`;
+  }
+  return `${html.slice(0, bodyIndex)}${script}${html.slice(bodyIndex)}`;
+};
+var getHtmlCandidates = (distPath, pathname) => {
+  const relativePath = pathname.replace(/^\/+/, "");
+  const decodedPath = decodeURIComponent(relativePath);
+  const normalizedPath = path3.normalize(decodedPath).replace(/^\.\.(?:[/\\]|$)+/, "");
+  const isDirectoryPath = pathname.endsWith("/");
+  const extension = path3.extname(normalizedPath);
+  if (extension === ".html") {
+    return [path3.join(distPath, normalizedPath)];
+  }
+  if (extension !== "") {
+    return [];
+  }
+  if (normalizedPath === "") {
+    return [path3.join(distPath, "index.html")];
+  }
+  if (isDirectoryPath) {
+    return [path3.join(distPath, normalizedPath, "index.html")];
+  }
+  return [
+    path3.join(distPath, normalizedPath, "index.html"),
+    path3.join(distPath, `${normalizedPath}.html`)
+  ];
+};
+var tryServeHtmlWithDevScript = async (config, req, res) => {
+  const distPath = path3.resolve(config.site.distPath ?? "./public");
+  const requestUrl = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+  const candidates = getHtmlCandidates(distPath, requestUrl.pathname);
+  for (const candidatePath of candidates) {
+    if (await fse2.pathExists(candidatePath)) {
+      const stats = await fse2.stat(candidatePath);
+      if (!stats.isFile()) {
+        continue;
+      }
+      const html = await fse2.readFile(candidatePath, "utf8");
+      const output = injectDevReloadScript(html);
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store");
+      res.end(output);
+      return true;
+    }
+  }
+  return false;
+};
+
+// scripts/lib/server.ts
+var serve = (config, port, getReloadVersion = () => 0) => {
+  console.log(`Starting local server at http://localhost:${port}`);
+  const server = http.createServer(async (req, res) => {
+    const requestPath = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`).pathname;
+    if (requestPath === DEV_RELOAD_ENDPOINT) {
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store");
+      res.end(JSON.stringify({ version: getReloadVersion() }));
+      return;
+    }
+    const servedHtml = await tryServeHtmlWithDevScript(config, req, res);
+    if (servedHtml) {
+      return;
+    }
+    await handler(req, res, {
+      public: config.site.distPath,
+      headers: [{
+        source: "**/*",
+        headers: [{
+          key: "Cache-Control",
+          value: "no-store"
+        }]
+      }]
+    });
+  });
+  server.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+  });
+};
+
+// scripts/lib/config.ts
+import { pathToFileURL } from "url";
+var defaultSiteConfig = {
+  rootUrl: "/",
+  metaSeparator: "!!!",
+  fileOutputMode: "files",
+  outputExtension: ".html",
+  indexPageName: "index",
+  defaultLayout: "default"
+};
+var loadConfig = async (configFile) => {
+  const module = await import(pathToFileURL(configFile).href);
+  return module.default;
+};
+
+// scripts/cli.ts
 var runNanogen = async (argv = process.argv.slice(2)) => {
   const verbose = getBoolArg(argv, "v", "verbose");
   const log = createLogger(verbose);
@@ -410,9 +533,9 @@ var runNanogen = async (argv = process.argv.slice(2)) => {
     return;
   }
   const configFileName = pickConfigFile(argv);
-  const configFile = path3.resolve(configFileName);
+  const configFile = path4.resolve(configFileName);
   log(`Using configuration file: ${configFileName} resolved to: ${configFile}`);
-  if (!fse2.existsSync(configFile)) {
+  if (!fse3.existsSync(configFile)) {
     throw new Error(`The configuration file "${configFile}" is missing`);
   }
   const config = await loadConfig(configFile);
@@ -422,12 +545,15 @@ var runNanogen = async (argv = process.argv.slice(2)) => {
   const shouldWatch = getBoolArg(argv, "w", "watch");
   const shouldServe = getBoolArg(argv, "s", "serve");
   build(config);
+  let reloadVersion = 0;
   if (shouldWatch) {
-    watch2(config);
+    watch2(config, () => {
+      reloadVersion += 1;
+    });
   }
   if (shouldServe) {
     const port = getIntArg(argv, "p", "port", 3e3);
-    serve(config, port);
+    serve(config, port, () => reloadVersion);
   }
 };
 if (import.meta.url.startsWith("file://")) {

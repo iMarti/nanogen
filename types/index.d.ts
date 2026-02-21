@@ -74,6 +74,6 @@ export declare class Page implements IPage {
 
 export declare const defaultSiteConfig: ISiteConfig;
 export declare function build(config: IConfig): void;
-export declare function watch(config: IConfig): void;
-export declare function serve(config: IConfig, port: number): void;
+export declare function watch(config: IConfig, onRebuild?: () => void): void;
+export declare function serve(config: IConfig, port: number, getReloadVersion?: () => number): void;
 export declare function runNanogen(argv?: string[]): Promise<void>;

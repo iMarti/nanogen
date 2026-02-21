@@ -162,13 +162,14 @@ npm link
 ```
 Otherwise the tool is invoked with `node nanogen.js`.
 
-As you write pages for your website, run these commands in two separate consoles, to watch and serve the pages, respectively. 
+As you write pages for your website, you can run a single command to watch, serve, and auto-refresh the browser when files change.
 ```console
-nanogen -w
-nanogen -s
+nanogen -w -s
 ```
 
 Go to the indicated URL in a browser to see the generated site.
+
+If you prefer, you can still run `nanogen -w` and `nanogen -s` in separate consoles, but browser auto-refresh is available when running them together with `-w -s`.
 
 ## Configuration
 
