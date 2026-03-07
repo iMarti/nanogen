@@ -1,13 +1,15 @@
 import fse from 'fs-extra';
 import fs from 'fs';
 import * as path from 'path';
-import { Page, IConfig } from './page.js';
+import { Page } from './page.js';
+import type { IBuildOptions, IConfig } from './interfaces.js';
 import * as glob from 'glob';
 import * as ejs from 'ejs';
 import { marked } from 'marked';
 import lodash from 'lodash';
 import json5 from 'json5';
 import { resolveIncludePath } from './lib/include-path.js';
+import { collectAssetUsage, getSourceAssetFiles, printAssetList } from './lib/asset-usage.js';
 
 /**
  * Write file only if content has changed
@@ -104,6 +106,13 @@ class Build {
 		this.#buildLayout();
 		return this.#writeFile();
 	}
+	public getOutputPath(): string {
+		if (this.config.site.fileOutputMode === 'folders' && !this.page.isIndex) {
+			return path.join(this.#destPath, this.page.parsedPath.name, `${this.config.site.indexPageName}${this.config.site.outputExtension}`);
+		}
+
+		return path.join(this.#destPath, `${this.page.parsedPath.name}${this.config.site.outputExtension}`);
+	}
 	#buildContents(): void {
 		for (const partId in this.#parts) {
 			this.#contents[partId] = this.#buildContent(this.#parts[partId]);
@@ -171,16 +180,8 @@ class Build {
 		this.#contents = {};
 	}
 	#writeFile(): boolean {
-		let destPathname: string;
-
-		if (this.config.site.fileOutputMode === 'folders' && !this.page.isIndex) {
-			const folder = path.join(this.#destPath, this.page.parsedPath.name);
-			fse.mkdirSync(folder);
-			destPathname = path.join(folder, `${this.config.site.indexPageName}${this.config.site.outputExtension}`);
-		} else {
-			destPathname = path.join(this.#destPath, `${this.page.parsedPath.name}${this.config.site.outputExtension}`);
-		}
-
+		const destPathname = this.getOutputPath();
+		fse.mkdirpSync(path.dirname(destPathname));
 		return writeFileIfChanged(destPathname, this.#layout);
 	}
 }
@@ -212,20 +213,24 @@ ${tags.join('\n')}
  * Copy asset files only if they have changed
  * @param srcPath Source assets directory
  * @param destPath Destination directory
+ * @param assetFiles Relative paths to source assets to copy
  * @returns Object with total and skipped counts
  */
-function copyAssetsIfChanged(srcPath: string, destPath: string): { total: number; skipped: number } {
+function copyAssetsIfChanged(srcPath: string, destPath: string, assetFiles: readonly string[]): { total: number; skipped: number } {
 	const assetsPath = path.join(srcPath, 'assets');
 	
 	if (!fse.existsSync(assetsPath)) {
 		return { total: 0, skipped: 0 };
 	}
 
-	const assetFiles = glob.sync('**/*', { cwd: assetsPath, nodir: true });
 	let skipped = 0;
 
 	for (const file of assetFiles) {
 		const srcFile = path.join(assetsPath, file);
+		if (!fse.existsSync(srcFile)) {
+			continue;
+		}
+
 		const destFile = path.join(destPath, file);
 
 		// Ensure destination directory exists
@@ -249,26 +254,15 @@ function copyAssetsIfChanged(srcPath: string, destPath: string): { total: number
 	return { total: assetFiles.length, skipped };
 }
 
-/**
- * Build the entire site
- * @param config Site configuration
- */
-function build(config: IConfig): void {
-	const startTime = process.hrtime();
+interface IPageBuildResult {
+	builds: Build[];
+	skippedCount: number;
+}
 
-	Page.pages = { all: [] };
-
-	// clear destination folder if clean flag is set
-	if (config.site.clean) {
-		fse.emptyDirSync(config.site.distPath);
-	}
-
-	// copy assets folder (only if changed)
-	const assetCopy = copyAssetsIfChanged(config.site.srcPath, config.site.distPath);
-
-	// build the pages
+function buildPublishedPages(config: IConfig): IPageBuildResult {
 	const pathnames = glob.sync('**/*.@(ejs|md|html)', { cwd: `${config.site.srcPath}/pages` });
 	let builds = pathnames.map(pathname => new Build(pathname, config));
+
 	builds.forEach(build => build.page.bindParent());
 	builds = builds.filter(build => {
 		const isPublished = build.page.isPublished();
@@ -279,9 +273,62 @@ function build(config: IConfig): void {
 	});
 	builds.forEach(build => build.page.storeById());
 	builds.forEach(build => build.page.bindChildren());
+
 	const writeResults = builds.map(build => build.build());
-	// Count files that were skipped (returned false) but exclude external links
 	const skippedCount = builds.filter((build, i) => !build.page.externalLink && !writeResults[i]).length;
+
+	return { builds, skippedCount };
+}
+
+function processAssets(config: IConfig, builds: readonly Build[], options: IBuildOptions): { total: number; skipped: number } {
+	const sourceAssets = getSourceAssetFiles(config.site.srcPath);
+	const pageOutputPaths = builds
+		.filter(build => !build.page.externalLink)
+		.map(build => build.getOutputPath());
+	const assetUsage = collectAssetUsage(config.site.distPath, pageOutputPaths, sourceAssets);
+
+	if (options.listUsedAssets) {
+		printAssetList('Used assets', assetUsage.usedAssets);
+	}
+
+	if (options.listUnusedAssets) {
+		printAssetList('Unused assets', assetUsage.unusedAssets);
+	}
+
+	const assetsToCopy = options.copyAllAssets ? assetUsage.allAssets : [...assetUsage.usedAssets];
+	return copyAssetsIfChanged(config.site.srcPath, config.site.distPath, assetsToCopy);
+}
+
+function logBuildSummary(startTime: [number, number], pageCount: number, skippedPages: number, skippedAssets: number, sitemapSkipped: number): void {
+	const timeDiff = process.hrtime(startTime);
+	const duration = timeDiff[0] * 1000 + timeDiff[1] / 1e6;
+	const round = (d: number) => Math.round(d * 10) / 10;
+
+	const parts: string[] = [];
+	if (skippedPages > 0) parts.push(`${skippedPages} page${skippedPages !== 1 ? 's' : ''}`);
+	if (skippedAssets > 0) parts.push(`${skippedAssets} asset${skippedAssets !== 1 ? 's' : ''}`);
+	if (sitemapSkipped > 0) parts.push('sitemap');
+
+	const skippedMsg = parts.length > 0 ? ` (${parts.join(', ')} unchanged)` : '';
+	console.log(`${new Date().toLocaleString()} Successfully built ${pageCount} pages in ${round(duration)} ms, ${round(duration / pageCount)} ms/page${skippedMsg}`);
+}
+
+/**
+ * Build the entire site
+ * @param config Site configuration
+ * @param options Build options
+ */
+function build(config: IConfig, options: IBuildOptions = {}): void {
+	const startTime = process.hrtime();
+
+	Page.pages = { all: [] };
+
+	// clear destination folder if clean flag is set
+	if (config.site.clean) {
+		fse.emptyDirSync(config.site.distPath);
+	}
+
+	const { builds, skippedCount } = buildPublishedPages(config);
 
 	// build the sitemap
 	let sitemapSkipped = 0;
@@ -292,17 +339,8 @@ function build(config: IConfig): void {
 		}
 	}
 
-	// display build time
-	const timeDiff = process.hrtime(startTime);
-	const duration = timeDiff[0] * 1000 + timeDiff[1] / 1e6;
-	const round = (d: number) => Math.round(d * 10) / 10;
-	const totalSkipped = skippedCount + assetCopy.skipped + sitemapSkipped;
-	const parts: string[] = [];
-	if (skippedCount > 0) parts.push(`${skippedCount} page${skippedCount !== 1 ? 's' : ''}`);
-	if (assetCopy.skipped > 0) parts.push(`${assetCopy.skipped} asset${assetCopy.skipped !== 1 ? 's' : ''}`);
-	if (sitemapSkipped > 0) parts.push('sitemap');
-	const skippedMsg = parts.length > 0 ? ` (${parts.join(', ')} unchanged)` : '';
-	console.log(`${new Date().toLocaleString()} Successfully built ${builds.length} pages in ${round(duration)} ms, ${round(duration / builds.length)} ms/page${skippedMsg}`);
+	const assetCopy = processAssets(config, builds, options);
+	logBuildSummary(startTime, builds.length, skippedCount, assetCopy.skipped, sitemapSkipped);
 }
 
 export { build, IConfig }

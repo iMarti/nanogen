@@ -27,6 +27,9 @@ Options
   -w, --watch     Start local server and watch for file changes
   -p, --port      Port to use for local server (default: 3000)
   -c, --clean     Clear output directory before building
+  --copy-all-assets    Copy all assets from src/assets
+  --list-used-assets   Print assets referenced by generated pages
+  --list-unused-assets Print assets not referenced by generated pages
   -h, --help      Display this help text
   -s, --serve     Start local server to serve the generated files
   -v, --verbose   Enable verbose logging

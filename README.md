@@ -132,7 +132,26 @@ You can also run NanoGen directly with npx if needed:
 ```console
 npx nanogen -h                 # View all options
 npx nanogen nanogen.config.js  # Build with custom config file
+npx nanogen --list-used-assets
+npx nanogen --list-unused-assets
+npx nanogen --copy-all-assets
 ```
+
+### Asset Copying Behavior
+
+By default, NanoGen now copies only assets from `src/assets/` that are referenced by generated pages.
+
+Use these options to inspect or override this behavior:
+
+```console
+nanogen --list-used-assets     # Print referenced assets
+nanogen --list-unused-assets   # Print source assets not referenced in generated pages
+nanogen --copy-all-assets      # Force copy all assets from src/assets
+```
+
+Notes:
+- Used/unused asset detection is based on generated HTML pages from the current build set (including unchanged pages).
+- In non-clean builds, existing files in `public/` are not deleted automatically.
 
 ### Deployment
 

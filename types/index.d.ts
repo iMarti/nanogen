@@ -31,6 +31,12 @@ export interface IConfig {
 	sitemap?: ISitemapConfig;
 }
 
+export interface IBuildOptions {
+	listUsedAssets?: boolean;
+	listUnusedAssets?: boolean;
+	copyAllAssets?: boolean;
+}
+
 export interface IPage extends IPageMeta {
 	parent: IPage;
 	children: IPage[];
@@ -73,7 +79,7 @@ export declare class Page implements IPage {
 }
 
 export declare const defaultSiteConfig: ISiteConfig;
-export declare function build(config: IConfig): void;
-export declare function watch(config: IConfig, onRebuild?: () => void): void;
+export declare function build(config: IConfig, options?: IBuildOptions): void;
+export declare function watch(config: IConfig, onRebuild?: () => void, buildOptions?: IBuildOptions): void;
 export declare function serve(config: IConfig, port: number, getReloadVersion?: () => number): void;
 export declare function runNanogen(argv?: string[]): Promise<void>;

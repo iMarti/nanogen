@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 // scripts/cli.ts
-import * as path5 from "path";
-import fse4 from "fs-extra";
+import * as path6 from "path";
+import fse5 from "fs-extra";
 
 // scripts/page-builder.ts
-import fse2 from "fs-extra";
+import fse3 from "fs-extra";
 import fs from "fs";
-import * as path3 from "path";
+import * as path4 from "path";
 
 // scripts/page.ts
 import * as path from "path";
@@ -111,7 +111,7 @@ var Page = class _Page {
 };
 
 // scripts/page-builder.ts
-import * as glob from "glob";
+import * as glob2 from "glob";
 import * as ejs from "ejs";
 import { marked } from "marked";
 import lodash2 from "lodash";
@@ -137,15 +137,126 @@ function resolveIncludePath(baseDir, srcRoot, includePath) {
   return resolvePath(baseDir, srcRoot, includePath);
 }
 
+// scripts/lib/asset-usage.ts
+import fse2 from "fs-extra";
+import * as path3 from "path";
+import * as glob from "glob";
+function normalizeAssetPath(pathname) {
+  return pathname.split(path3.sep).join("/");
+}
+function getSourceAssetFiles(srcPath) {
+  const assetsPath = path3.join(srcPath, "assets");
+  if (!fse2.existsSync(assetsPath)) {
+    return [];
+  }
+  return glob.sync("**/*", { cwd: assetsPath, nodir: true }).map(normalizeAssetPath);
+}
+function stripQueryAndHash(assetRef) {
+  return assetRef.replace(/[?#].*$/, "");
+}
+function isLocalAssetRef(assetRef) {
+  if (!assetRef) {
+    return false;
+  }
+  const value = assetRef.trim().toLowerCase();
+  if (!value || value.startsWith("#")) {
+    return false;
+  }
+  return !(value.startsWith("http://") || value.startsWith("https://") || value.startsWith("//") || value.startsWith("data:") || value.startsWith("mailto:") || value.startsWith("tel:") || value.startsWith("javascript:"));
+}
+function extractAssetRefsFromHtml(content) {
+  const refs = [];
+  const attrRegex = /\b(?:href|src)\s*=\s*(['"])(.*?)\1/gi;
+  const srcsetRegex = /\bsrcset\s*=\s*(['"])(.*?)\1/gi;
+  for (const match of content.matchAll(attrRegex)) {
+    const ref = match[2]?.trim();
+    if (ref) {
+      refs.push(ref);
+    }
+  }
+  for (const match of content.matchAll(srcsetRegex)) {
+    const srcset = match[2]?.trim();
+    if (!srcset) {
+      continue;
+    }
+    for (const entry of srcset.split(",")) {
+      const candidate = entry.trim().split(/\s+/)[0];
+      if (candidate) {
+        refs.push(candidate);
+      }
+    }
+  }
+  return refs;
+}
+function resolveAssetRefToSourcePath(assetRef, htmlOutputPath, distPath, sourceAssets) {
+  if (!isLocalAssetRef(assetRef)) {
+    return void 0;
+  }
+  const cleanRef = stripQueryAndHash(assetRef.trim());
+  if (!cleanRef) {
+    return void 0;
+  }
+  const decodedRef = (() => {
+    try {
+      return decodeURI(cleanRef);
+    } catch {
+      return cleanRef;
+    }
+  })();
+  const absolutePath = decodedRef.startsWith("/") ? path3.join(distPath, decodedRef) : path3.resolve(path3.dirname(htmlOutputPath), decodedRef);
+  const relativePath = path3.relative(distPath, absolutePath);
+  if (!relativePath || relativePath.startsWith("..") || path3.isAbsolute(relativePath)) {
+    return void 0;
+  }
+  const normalized = normalizeAssetPath(relativePath);
+  if (!sourceAssets.has(normalized)) {
+    return void 0;
+  }
+  return normalized;
+}
+function collectAssetUsage(distPath, pageOutputPaths, allAssets) {
+  const sourceAssetSet = new Set(allAssets);
+  const usedAssets = /* @__PURE__ */ new Set();
+  for (const outputPath of pageOutputPaths) {
+    if (!fse2.existsSync(outputPath)) {
+      continue;
+    }
+    const html = fse2.readFileSync(outputPath, "utf8");
+    for (const assetRef of extractAssetRefsFromHtml(html)) {
+      const assetPath = resolveAssetRefToSourcePath(assetRef, outputPath, distPath, sourceAssetSet);
+      if (assetPath) {
+        usedAssets.add(assetPath);
+      }
+    }
+  }
+  const unusedAssets = new Set(allAssets.filter((asset) => !usedAssets.has(asset)));
+  return {
+    allAssets: [...allAssets],
+    usedAssets,
+    unusedAssets
+  };
+}
+function printAssetList(label, assets) {
+  const sorted = [...assets].sort((a, b) => a.localeCompare(b));
+  console.log(`${label} (${sorted.length})`);
+  if (sorted.length === 0) {
+    console.log("  (none)");
+    return;
+  }
+  for (const asset of sorted) {
+    console.log(`  ${asset}`);
+  }
+}
+
 // scripts/page-builder.ts
 function writeFileIfChanged(filePath, content) {
-  if (fse2.existsSync(filePath)) {
-    const existingContent = fse2.readFileSync(filePath, "utf8");
+  if (fse3.existsSync(filePath)) {
+    const existingContent = fse3.readFileSync(filePath, "utf8");
     if (existingContent === content) {
       return false;
     }
   }
-  fse2.writeFileSync(filePath, content);
+  fse3.writeFileSync(filePath, content);
   return true;
 }
 var Build = class {
@@ -158,7 +269,7 @@ var Build = class {
     this.pathname = pathname;
     this.config = config;
     this.page = new Page(pathname, this.config);
-    this.#destPath = path3.join(this.config.site.distPath, this.page.parsedPath.dir);
+    this.#destPath = path4.join(this.config.site.distPath, this.page.parsedPath.dir);
     this.renderData = { ...config, page: this.page, pages: Page.pages };
     const source = this.#loadSource();
     this.#splitParts(source);
@@ -168,8 +279,8 @@ var Build = class {
   #layout;
   #destPath;
   #loadSource() {
-    const fullPath = path3.join(this.config.site.srcPath, "pages", this.pathname);
-    return fse2.readFileSync(fullPath, { encoding: "utf8" });
+    const fullPath = path4.join(this.config.site.srcPath, "pages", this.pathname);
+    return fse3.readFileSync(fullPath, { encoding: "utf8" });
   }
   #splitParts(source) {
     const pattern = `^${this.config.site.metaSeparator}([a-zA-Z_$][0-9a-zA-Z_$]*)?$`;
@@ -208,10 +319,16 @@ var Build = class {
     if (this.page.externalLink) {
       return false;
     }
-    fse2.mkdirsSync(this.#destPath);
+    fse3.mkdirsSync(this.#destPath);
     this.#buildContents();
     this.#buildLayout();
     return this.#writeFile();
+  }
+  getOutputPath() {
+    if (this.config.site.fileOutputMode === "folders" && !this.page.isIndex) {
+      return path4.join(this.#destPath, this.page.parsedPath.name, `${this.config.site.indexPageName}${this.config.site.outputExtension}`);
+    }
+    return path4.join(this.#destPath, `${this.page.parsedPath.name}${this.config.site.outputExtension}`);
   }
   #buildContents() {
     for (const partId in this.#parts) {
@@ -222,7 +339,7 @@ var Build = class {
   #buildContent(partSource) {
     switch (this.page.parsedPath.ext) {
       case ".ejs":
-        const templateDir = path3.dirname(path3.join(this.config.site.srcPath, "pages", this.pathname));
+        const templateDir = path4.dirname(path4.join(this.config.site.srcPath, "pages", this.pathname));
         const processedSource = this.#preprocessEjsIncludes(partSource, templateDir);
         return ejs.render(processedSource, this.renderData, {
           filename: this.pathname
@@ -238,7 +355,7 @@ var Build = class {
     return source.replace(includeRegex, (match, includePath) => {
       try {
         const resolvedPath = resolveIncludePath(baseDir, this.config.site.srcPath, includePath);
-        let content = fse2.readFileSync(resolvedPath, "utf8");
+        let content = fse3.readFileSync(resolvedPath, "utf8");
         if (resolvedPath.endsWith(".md")) {
           content = marked(content);
         }
@@ -250,9 +367,9 @@ var Build = class {
   }
   #buildLayout() {
     const layout = this.page.layout ?? this.page.parent?.childLayout ?? this.config.site.defaultLayout;
-    const fullPath = path3.join(this.config.site.srcPath, "layouts", `${layout}.ejs`);
-    let source = fse2.readFileSync(fullPath, { encoding: "utf8" });
-    const layoutsDir = path3.join(this.config.site.srcPath, "layouts");
+    const fullPath = path4.join(this.config.site.srcPath, "layouts", `${layout}.ejs`);
+    let source = fse3.readFileSync(fullPath, { encoding: "utf8" });
+    const layoutsDir = path4.join(this.config.site.srcPath, "layouts");
     source = this.#preprocessEjsIncludes(source, layoutsDir);
     const renderData = { ...this.renderData, contents: this.#contents };
     this.#layout = ejs.render(source, renderData, {
@@ -261,14 +378,8 @@ var Build = class {
     this.#contents = {};
   }
   #writeFile() {
-    let destPathname;
-    if (this.config.site.fileOutputMode === "folders" && !this.page.isIndex) {
-      const folder = path3.join(this.#destPath, this.page.parsedPath.name);
-      fse2.mkdirSync(folder);
-      destPathname = path3.join(folder, `${this.config.site.indexPageName}${this.config.site.outputExtension}`);
-    } else {
-      destPathname = path3.join(this.#destPath, `${this.page.parsedPath.name}${this.config.site.outputExtension}`);
-    }
+    const destPathname = this.getOutputPath();
+    fse3.mkdirpSync(path4.dirname(destPathname));
     return writeFileIfChanged(destPathname, this.#layout);
   }
 };
@@ -284,21 +395,23 @@ function buildSitemap(config, builds) {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${tags.join("\n")}
 </urlset>`;
-  const destPathname = path3.join(config.site.distPath, "sitemap.xml");
+  const destPathname = path4.join(config.site.distPath, "sitemap.xml");
   return writeFileIfChanged(destPathname, content);
 }
-function copyAssetsIfChanged(srcPath, destPath) {
-  const assetsPath = path3.join(srcPath, "assets");
-  if (!fse2.existsSync(assetsPath)) {
+function copyAssetsIfChanged(srcPath, destPath, assetFiles) {
+  const assetsPath = path4.join(srcPath, "assets");
+  if (!fse3.existsSync(assetsPath)) {
     return { total: 0, skipped: 0 };
   }
-  const assetFiles = glob.sync("**/*", { cwd: assetsPath, nodir: true });
   let skipped = 0;
   for (const file of assetFiles) {
-    const srcFile = path3.join(assetsPath, file);
-    const destFile = path3.join(destPath, file);
-    fse2.mkdirpSync(path3.dirname(destFile));
-    if (fse2.existsSync(destFile)) {
+    const srcFile = path4.join(assetsPath, file);
+    if (!fse3.existsSync(srcFile)) {
+      continue;
+    }
+    const destFile = path4.join(destPath, file);
+    fse3.mkdirpSync(path4.dirname(destFile));
+    if (fse3.existsSync(destFile)) {
       const srcContent = fs.readFileSync(srcFile);
       const destContent = fs.readFileSync(destFile);
       if (srcContent.equals(destContent)) {
@@ -306,18 +419,12 @@ function copyAssetsIfChanged(srcPath, destPath) {
         continue;
       }
     }
-    fse2.copyFileSync(srcFile, destFile);
+    fse3.copyFileSync(srcFile, destFile);
   }
   return { total: assetFiles.length, skipped };
 }
-function build(config) {
-  const startTime = process.hrtime();
-  Page.pages = { all: [] };
-  if (config.site.clean) {
-    fse2.emptyDirSync(config.site.distPath);
-  }
-  const assetCopy = copyAssetsIfChanged(config.site.srcPath, config.site.distPath);
-  const pathnames = glob.sync("**/*.@(ejs|md|html)", { cwd: `${config.site.srcPath}/pages` });
+function buildPublishedPages(config) {
+  const pathnames = glob2.sync("**/*.@(ejs|md|html)", { cwd: `${config.site.srcPath}/pages` });
   let builds = pathnames.map((pathname) => new Build(pathname, config));
   builds.forEach((build2) => build2.page.bindParent());
   builds = builds.filter((build2) => {
@@ -331,6 +438,39 @@ function build(config) {
   builds.forEach((build2) => build2.page.bindChildren());
   const writeResults = builds.map((build2) => build2.build());
   const skippedCount = builds.filter((build2, i) => !build2.page.externalLink && !writeResults[i]).length;
+  return { builds, skippedCount };
+}
+function processAssets(config, builds, options) {
+  const sourceAssets = getSourceAssetFiles(config.site.srcPath);
+  const pageOutputPaths = builds.filter((build2) => !build2.page.externalLink).map((build2) => build2.getOutputPath());
+  const assetUsage = collectAssetUsage(config.site.distPath, pageOutputPaths, sourceAssets);
+  if (options.listUsedAssets) {
+    printAssetList("Used assets", assetUsage.usedAssets);
+  }
+  if (options.listUnusedAssets) {
+    printAssetList("Unused assets", assetUsage.unusedAssets);
+  }
+  const assetsToCopy = options.copyAllAssets ? assetUsage.allAssets : [...assetUsage.usedAssets];
+  return copyAssetsIfChanged(config.site.srcPath, config.site.distPath, assetsToCopy);
+}
+function logBuildSummary(startTime, pageCount, skippedPages, skippedAssets, sitemapSkipped) {
+  const timeDiff = process.hrtime(startTime);
+  const duration = timeDiff[0] * 1e3 + timeDiff[1] / 1e6;
+  const round = (d) => Math.round(d * 10) / 10;
+  const parts = [];
+  if (skippedPages > 0) parts.push(`${skippedPages} page${skippedPages !== 1 ? "s" : ""}`);
+  if (skippedAssets > 0) parts.push(`${skippedAssets} asset${skippedAssets !== 1 ? "s" : ""}`);
+  if (sitemapSkipped > 0) parts.push("sitemap");
+  const skippedMsg = parts.length > 0 ? ` (${parts.join(", ")} unchanged)` : "";
+  console.log(`${(/* @__PURE__ */ new Date()).toLocaleString()} Successfully built ${pageCount} pages in ${round(duration)} ms, ${round(duration / pageCount)} ms/page${skippedMsg}`);
+}
+function build(config, options = {}) {
+  const startTime = process.hrtime();
+  Page.pages = { all: [] };
+  if (config.site.clean) {
+    fse3.emptyDirSync(config.site.distPath);
+  }
+  const { builds, skippedCount } = buildPublishedPages(config);
   let sitemapSkipped = 0;
   if (config.sitemap) {
     const sitemapWritten = buildSitemap(config, builds);
@@ -338,16 +478,8 @@ function build(config) {
       sitemapSkipped = 1;
     }
   }
-  const timeDiff = process.hrtime(startTime);
-  const duration = timeDiff[0] * 1e3 + timeDiff[1] / 1e6;
-  const round = (d) => Math.round(d * 10) / 10;
-  const totalSkipped = skippedCount + assetCopy.skipped + sitemapSkipped;
-  const parts = [];
-  if (skippedCount > 0) parts.push(`${skippedCount} page${skippedCount !== 1 ? "s" : ""}`);
-  if (assetCopy.skipped > 0) parts.push(`${assetCopy.skipped} asset${assetCopy.skipped !== 1 ? "s" : ""}`);
-  if (sitemapSkipped > 0) parts.push("sitemap");
-  const skippedMsg = parts.length > 0 ? ` (${parts.join(", ")} unchanged)` : "";
-  console.log(`${(/* @__PURE__ */ new Date()).toLocaleString()} Successfully built ${builds.length} pages in ${round(duration)} ms, ${round(duration / builds.length)} ms/page${skippedMsg}`);
+  const assetCopy = processAssets(config, builds, options);
+  logBuildSummary(startTime, builds.length, skippedCount, assetCopy.skipped, sitemapSkipped);
 }
 
 // scripts/lib/args.ts
@@ -370,6 +502,9 @@ Options
   -w, --watch     Start local server and watch for file changes
   -p, --port      Port to use for local server (default: 3000)
   -c, --clean     Clear output directory before building
+  --copy-all-assets    Copy all assets from src/assets
+  --list-used-assets   Print assets referenced by generated pages
+  --list-unused-assets Print assets not referenced by generated pages
   -h, --help      Display this help text
   -s, --serve     Start local server to serve the generated files
   -v, --verbose   Enable verbose logging
@@ -379,12 +514,12 @@ Options
 // scripts/lib/watch.ts
 import * as chokidar from "chokidar";
 import lodash3 from "lodash";
-var watch2 = (config, onRebuild) => {
+var watch2 = (config, onRebuild, buildOptions = {}) => {
   console.log(`Watching ${config.site.srcPath} for changes...`);
   chokidar.watch(config.site.srcPath).on(
     "all",
     lodash3.debounce(() => {
-      build(config);
+      build(config, buildOptions);
       onRebuild?.();
       console.log("Waiting for changes...");
     }, 500)
@@ -396,8 +531,8 @@ import * as http from "http";
 import handler from "serve-handler";
 
 // scripts/lib/dev-reload.ts
-import * as path4 from "path";
-import fse3 from "fs-extra";
+import * as path5 from "path";
+import fse4 from "fs-extra";
 var DEV_RELOAD_ENDPOINT = "/__nanogen_reload";
 var buildDevReloadScript = () => `
 <script>
@@ -446,37 +581,37 @@ var injectDevReloadScript = (html) => {
 var getHtmlCandidates = (distPath, pathname) => {
   const relativePath = pathname.replace(/^\/+/, "");
   const decodedPath = decodeURIComponent(relativePath);
-  const normalizedPath = path4.normalize(decodedPath).replace(/^\.\.(?:[/\\]|$)+/, "");
+  const normalizedPath = path5.normalize(decodedPath).replace(/^\.\.(?:[/\\]|$)+/, "");
   const isDirectoryPath = pathname.endsWith("/");
-  const extension = path4.extname(normalizedPath);
+  const extension = path5.extname(normalizedPath);
   if (extension === ".html") {
-    return [path4.join(distPath, normalizedPath)];
+    return [path5.join(distPath, normalizedPath)];
   }
   if (extension !== "") {
     return [];
   }
   if (normalizedPath === "") {
-    return [path4.join(distPath, "index.html")];
+    return [path5.join(distPath, "index.html")];
   }
   if (isDirectoryPath) {
-    return [path4.join(distPath, normalizedPath, "index.html")];
+    return [path5.join(distPath, normalizedPath, "index.html")];
   }
   return [
-    path4.join(distPath, normalizedPath, "index.html"),
-    path4.join(distPath, `${normalizedPath}.html`)
+    path5.join(distPath, normalizedPath, "index.html"),
+    path5.join(distPath, `${normalizedPath}.html`)
   ];
 };
 var tryServeHtmlWithDevScript = async (config, req, res) => {
-  const distPath = path4.resolve(config.site.distPath ?? "./public");
+  const distPath = path5.resolve(config.site.distPath ?? "./public");
   const requestUrl = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
   const candidates = getHtmlCandidates(distPath, requestUrl.pathname);
   for (const candidatePath of candidates) {
-    if (await fse3.pathExists(candidatePath)) {
-      const stats = await fse3.stat(candidatePath);
+    if (await fse4.pathExists(candidatePath)) {
+      const stats = await fse4.stat(candidatePath);
       if (!stats.isFile()) {
         continue;
       }
-      const html = await fse3.readFile(candidatePath, "utf8");
+      const html = await fse4.readFile(candidatePath, "utf8");
       const output = injectDevReloadScript(html);
       res.statusCode = 200;
       res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -544,9 +679,9 @@ var runNanogen = async (argv = process.argv.slice(2)) => {
     return;
   }
   const configFileName = pickConfigFile(argv);
-  const configFile = path5.resolve(configFileName);
+  const configFile = path6.resolve(configFileName);
   log(`Using configuration file: ${configFileName} resolved to: ${configFile}`);
-  if (!fse4.existsSync(configFile)) {
+  if (!fse5.existsSync(configFile)) {
     throw new Error(`The configuration file "${configFile}" is missing`);
   }
   const config = await loadConfig(configFile);
@@ -555,12 +690,17 @@ var runNanogen = async (argv = process.argv.slice(2)) => {
   log("Site configuration:", config.site.srcPath, config.site.distPath, config.site.rootUrl);
   const shouldWatch = getBoolArg(argv, "w", "watch");
   const shouldServe = getBoolArg(argv, "s", "serve");
-  build(config);
+  const buildOptions = {
+    copyAllAssets: getBoolArg(argv, "", "copy-all-assets"),
+    listUsedAssets: getBoolArg(argv, "", "list-used-assets"),
+    listUnusedAssets: getBoolArg(argv, "", "list-unused-assets")
+  };
+  build(config, buildOptions);
   let reloadVersion = 0;
   if (shouldWatch) {
     watch2(config, () => {
       reloadVersion += 1;
-    });
+    }, buildOptions);
   }
   if (shouldServe) {
     const port = getIntArg(argv, "p", "port", 3e3);

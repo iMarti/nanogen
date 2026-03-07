@@ -3,7 +3,7 @@
 import * as path from 'path';
 import fse from 'fs-extra';
 import { build } from './page-builder.js';
-import type { IConfig, IPage, ISiteConfig, IPageMeta, ISitemapConfig } from './interfaces.js';
+import type { IBuildOptions, IConfig, IPage, ISiteConfig, IPageMeta, ISitemapConfig } from './interfaces.js';
 import { getBoolArg, getIntArg, pickConfigFile, createLogger, printHelp } from './lib/args.js';
 import { watch } from './lib/watch.js';
 import { serve } from './lib/server.js';
@@ -33,9 +33,14 @@ const runNanogen = async (argv: string[] = process.argv.slice(2)): Promise<void>
 
     const shouldWatch = getBoolArg(argv, 'w', 'watch');
     const shouldServe = getBoolArg(argv, 's', 'serve');
+    const buildOptions: IBuildOptions = {
+        copyAllAssets: getBoolArg(argv, '', 'copy-all-assets'),
+        listUsedAssets: getBoolArg(argv, '', 'list-used-assets'),
+        listUnusedAssets: getBoolArg(argv, '', 'list-unused-assets')
+    };
 
     // Initial build
-    build(config);
+    build(config, buildOptions);
 
     let reloadVersion = 0;
 
@@ -43,7 +48,7 @@ const runNanogen = async (argv: string[] = process.argv.slice(2)): Promise<void>
     if (shouldWatch) {
         watch(config, () => {
             reloadVersion += 1;
-        });
+        }, buildOptions);
     }
 
     // Start server if requested
@@ -69,4 +74,4 @@ if (import.meta.url.startsWith('file://')) {
 
 export { build, watch, serve, defaultSiteConfig, runNanogen };
 export { Page } from './page.js';
-export type { IConfig, IPage, ISiteConfig, IPageMeta, ISitemapConfig };
+export type { IBuildOptions, IConfig, IPage, ISiteConfig, IPageMeta, ISitemapConfig };

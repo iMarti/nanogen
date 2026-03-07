@@ -53,6 +53,14 @@ interface IConfig {
 	site: ISiteConfig;
 	sitemap?: ISitemapConfig;
 }
+interface IBuildOptions {
+	/** List source assets that are referenced by generated pages */
+	listUsedAssets?: boolean;
+	/** List source assets that are not referenced by generated pages */
+	listUnusedAssets?: boolean;
+	/** Copy all source assets, even if not referenced by generated pages */
+	copyAllAssets?: boolean;
+}
 interface IPage extends IPageMeta {
 	parent: IPage;
 	children: IPage[];
@@ -63,4 +71,4 @@ interface IPage extends IPageMeta {
 	url: string;
 }
 
-export { IPage, IPageMeta, ISiteConfig, ISitemapConfig, IConfig }
+export { IPage, IPageMeta, ISiteConfig, ISitemapConfig, IConfig, IBuildOptions }
