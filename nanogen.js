@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 // scripts/cli.ts
-import * as path4 from "path";
-import fse3 from "fs-extra";
+import * as path5 from "path";
+import fse4 from "fs-extra";
 
 // scripts/page-builder.ts
-import fse from "fs-extra";
+import fse2 from "fs-extra";
 import fs from "fs";
-import * as path2 from "path";
+import * as path3 from "path";
 
 // scripts/page.ts
 import * as path from "path";
@@ -116,14 +116,36 @@ import * as ejs from "ejs";
 import { marked } from "marked";
 import lodash2 from "lodash";
 import json5 from "json5";
+
+// scripts/lib/include-path.ts
+import fse from "fs-extra";
+import * as path2 from "path";
+var DEFAULT_INCLUDE_EXTENSIONS = ["", ".ejs", ".html", ".md", ".js"];
+function resolvePath(baseDir, srcRoot, includeTarget) {
+  if (includeTarget.startsWith("/") || includeTarget.startsWith("\\")) {
+    return path2.join(srcRoot, includeTarget.replace(/^[/\\]+/, ""));
+  }
+  return path2.resolve(baseDir, includeTarget);
+}
+function resolveIncludePath(baseDir, srcRoot, includePath) {
+  for (const ext of DEFAULT_INCLUDE_EXTENSIONS) {
+    const candidate = resolvePath(baseDir, srcRoot, includePath + ext);
+    if (fse.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return resolvePath(baseDir, srcRoot, includePath);
+}
+
+// scripts/page-builder.ts
 function writeFileIfChanged(filePath, content) {
-  if (fse.existsSync(filePath)) {
-    const existingContent = fse.readFileSync(filePath, "utf8");
+  if (fse2.existsSync(filePath)) {
+    const existingContent = fse2.readFileSync(filePath, "utf8");
     if (existingContent === content) {
       return false;
     }
   }
-  fse.writeFileSync(filePath, content);
+  fse2.writeFileSync(filePath, content);
   return true;
 }
 var Build = class {
@@ -136,7 +158,7 @@ var Build = class {
     this.pathname = pathname;
     this.config = config;
     this.page = new Page(pathname, this.config);
-    this.#destPath = path2.join(this.config.site.distPath, this.page.parsedPath.dir);
+    this.#destPath = path3.join(this.config.site.distPath, this.page.parsedPath.dir);
     this.renderData = { ...config, page: this.page, pages: Page.pages };
     const source = this.#loadSource();
     this.#splitParts(source);
@@ -146,8 +168,8 @@ var Build = class {
   #layout;
   #destPath;
   #loadSource() {
-    const fullPath = path2.join(this.config.site.srcPath, "pages", this.pathname);
-    return fse.readFileSync(fullPath, { encoding: "utf8" });
+    const fullPath = path3.join(this.config.site.srcPath, "pages", this.pathname);
+    return fse2.readFileSync(fullPath, { encoding: "utf8" });
   }
   #splitParts(source) {
     const pattern = `^${this.config.site.metaSeparator}([a-zA-Z_$][0-9a-zA-Z_$]*)?$`;
@@ -186,7 +208,7 @@ var Build = class {
     if (this.page.externalLink) {
       return false;
     }
-    fse.mkdirsSync(this.#destPath);
+    fse2.mkdirsSync(this.#destPath);
     this.#buildContents();
     this.#buildLayout();
     return this.#writeFile();
@@ -200,7 +222,7 @@ var Build = class {
   #buildContent(partSource) {
     switch (this.page.parsedPath.ext) {
       case ".ejs":
-        const templateDir = path2.dirname(path2.join(this.config.site.srcPath, "pages", this.pathname));
+        const templateDir = path3.dirname(path3.join(this.config.site.srcPath, "pages", this.pathname));
         const processedSource = this.#preprocessEjsIncludes(partSource, templateDir);
         return ejs.render(processedSource, this.renderData, {
           filename: this.pathname
@@ -215,33 +237,22 @@ var Build = class {
     const includeRegex = /<%-\s*include\(['"]([^'"]+)['"]\)\s*%>/g;
     return source.replace(includeRegex, (match, includePath) => {
       try {
-        const extensions = ["", ".ejs", ".html", ".md", ".js"];
-        let resolvedPath = null;
-        for (const ext of extensions) {
-          const candidate = path2.resolve(baseDir, includePath + ext);
-          if (fse.existsSync(candidate)) {
-            resolvedPath = candidate;
-            break;
-          }
-        }
-        if (!resolvedPath) {
-          resolvedPath = path2.resolve(baseDir, includePath);
-        }
-        let content = fse.readFileSync(resolvedPath, "utf8");
+        const resolvedPath = resolveIncludePath(baseDir, this.config.site.srcPath, includePath);
+        let content = fse2.readFileSync(resolvedPath, "utf8");
         if (resolvedPath.endsWith(".md")) {
           content = marked(content);
         }
         return content;
       } catch (err) {
-        throw new Error(`EJS include failed: "${includePath}" not found. Searched in: ${baseDir}`);
+        throw new Error(`EJS include failed: "${includePath}" not found. Searched relative to: ${baseDir} and site root: ${this.config.site.srcPath}`);
       }
     });
   }
   #buildLayout() {
     const layout = this.page.layout ?? this.page.parent?.childLayout ?? this.config.site.defaultLayout;
-    const fullPath = path2.join(this.config.site.srcPath, "layouts", `${layout}.ejs`);
-    let source = fse.readFileSync(fullPath, { encoding: "utf8" });
-    const layoutsDir = path2.join(this.config.site.srcPath, "layouts");
+    const fullPath = path3.join(this.config.site.srcPath, "layouts", `${layout}.ejs`);
+    let source = fse2.readFileSync(fullPath, { encoding: "utf8" });
+    const layoutsDir = path3.join(this.config.site.srcPath, "layouts");
     source = this.#preprocessEjsIncludes(source, layoutsDir);
     const renderData = { ...this.renderData, contents: this.#contents };
     this.#layout = ejs.render(source, renderData, {
@@ -252,11 +263,11 @@ var Build = class {
   #writeFile() {
     let destPathname;
     if (this.config.site.fileOutputMode === "folders" && !this.page.isIndex) {
-      const folder = path2.join(this.#destPath, this.page.parsedPath.name);
-      fse.mkdirSync(folder);
-      destPathname = path2.join(folder, `${this.config.site.indexPageName}${this.config.site.outputExtension}`);
+      const folder = path3.join(this.#destPath, this.page.parsedPath.name);
+      fse2.mkdirSync(folder);
+      destPathname = path3.join(folder, `${this.config.site.indexPageName}${this.config.site.outputExtension}`);
     } else {
-      destPathname = path2.join(this.#destPath, `${this.page.parsedPath.name}${this.config.site.outputExtension}`);
+      destPathname = path3.join(this.#destPath, `${this.page.parsedPath.name}${this.config.site.outputExtension}`);
     }
     return writeFileIfChanged(destPathname, this.#layout);
   }
@@ -273,21 +284,21 @@ function buildSitemap(config, builds) {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${tags.join("\n")}
 </urlset>`;
-  const destPathname = path2.join(config.site.distPath, "sitemap.xml");
+  const destPathname = path3.join(config.site.distPath, "sitemap.xml");
   return writeFileIfChanged(destPathname, content);
 }
 function copyAssetsIfChanged(srcPath, destPath) {
-  const assetsPath = path2.join(srcPath, "assets");
-  if (!fse.existsSync(assetsPath)) {
+  const assetsPath = path3.join(srcPath, "assets");
+  if (!fse2.existsSync(assetsPath)) {
     return { total: 0, skipped: 0 };
   }
   const assetFiles = glob.sync("**/*", { cwd: assetsPath, nodir: true });
   let skipped = 0;
   for (const file of assetFiles) {
-    const srcFile = path2.join(assetsPath, file);
-    const destFile = path2.join(destPath, file);
-    fse.mkdirpSync(path2.dirname(destFile));
-    if (fse.existsSync(destFile)) {
+    const srcFile = path3.join(assetsPath, file);
+    const destFile = path3.join(destPath, file);
+    fse2.mkdirpSync(path3.dirname(destFile));
+    if (fse2.existsSync(destFile)) {
       const srcContent = fs.readFileSync(srcFile);
       const destContent = fs.readFileSync(destFile);
       if (srcContent.equals(destContent)) {
@@ -295,7 +306,7 @@ function copyAssetsIfChanged(srcPath, destPath) {
         continue;
       }
     }
-    fse.copyFileSync(srcFile, destFile);
+    fse2.copyFileSync(srcFile, destFile);
   }
   return { total: assetFiles.length, skipped };
 }
@@ -303,7 +314,7 @@ function build(config) {
   const startTime = process.hrtime();
   Page.pages = { all: [] };
   if (config.site.clean) {
-    fse.emptyDirSync(config.site.distPath);
+    fse2.emptyDirSync(config.site.distPath);
   }
   const assetCopy = copyAssetsIfChanged(config.site.srcPath, config.site.distPath);
   const pathnames = glob.sync("**/*.@(ejs|md|html)", { cwd: `${config.site.srcPath}/pages` });
@@ -385,8 +396,8 @@ import * as http from "http";
 import handler from "serve-handler";
 
 // scripts/lib/dev-reload.ts
-import * as path3 from "path";
-import fse2 from "fs-extra";
+import * as path4 from "path";
+import fse3 from "fs-extra";
 var DEV_RELOAD_ENDPOINT = "/__nanogen_reload";
 var buildDevReloadScript = () => `
 <script>
@@ -435,37 +446,37 @@ var injectDevReloadScript = (html) => {
 var getHtmlCandidates = (distPath, pathname) => {
   const relativePath = pathname.replace(/^\/+/, "");
   const decodedPath = decodeURIComponent(relativePath);
-  const normalizedPath = path3.normalize(decodedPath).replace(/^\.\.(?:[/\\]|$)+/, "");
+  const normalizedPath = path4.normalize(decodedPath).replace(/^\.\.(?:[/\\]|$)+/, "");
   const isDirectoryPath = pathname.endsWith("/");
-  const extension = path3.extname(normalizedPath);
+  const extension = path4.extname(normalizedPath);
   if (extension === ".html") {
-    return [path3.join(distPath, normalizedPath)];
+    return [path4.join(distPath, normalizedPath)];
   }
   if (extension !== "") {
     return [];
   }
   if (normalizedPath === "") {
-    return [path3.join(distPath, "index.html")];
+    return [path4.join(distPath, "index.html")];
   }
   if (isDirectoryPath) {
-    return [path3.join(distPath, normalizedPath, "index.html")];
+    return [path4.join(distPath, normalizedPath, "index.html")];
   }
   return [
-    path3.join(distPath, normalizedPath, "index.html"),
-    path3.join(distPath, `${normalizedPath}.html`)
+    path4.join(distPath, normalizedPath, "index.html"),
+    path4.join(distPath, `${normalizedPath}.html`)
   ];
 };
 var tryServeHtmlWithDevScript = async (config, req, res) => {
-  const distPath = path3.resolve(config.site.distPath ?? "./public");
+  const distPath = path4.resolve(config.site.distPath ?? "./public");
   const requestUrl = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
   const candidates = getHtmlCandidates(distPath, requestUrl.pathname);
   for (const candidatePath of candidates) {
-    if (await fse2.pathExists(candidatePath)) {
-      const stats = await fse2.stat(candidatePath);
+    if (await fse3.pathExists(candidatePath)) {
+      const stats = await fse3.stat(candidatePath);
       if (!stats.isFile()) {
         continue;
       }
-      const html = await fse2.readFile(candidatePath, "utf8");
+      const html = await fse3.readFile(candidatePath, "utf8");
       const output = injectDevReloadScript(html);
       res.statusCode = 200;
       res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -533,9 +544,9 @@ var runNanogen = async (argv = process.argv.slice(2)) => {
     return;
   }
   const configFileName = pickConfigFile(argv);
-  const configFile = path4.resolve(configFileName);
+  const configFile = path5.resolve(configFileName);
   log(`Using configuration file: ${configFileName} resolved to: ${configFile}`);
-  if (!fse3.existsSync(configFile)) {
+  if (!fse4.existsSync(configFile)) {
     throw new Error(`The configuration file "${configFile}" is missing`);
   }
   const config = await loadConfig(configFile);

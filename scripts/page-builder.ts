@@ -7,6 +7,7 @@ import * as ejs from 'ejs';
 import { marked } from 'marked';
 import lodash from 'lodash';
 import json5 from 'json5';
+import { resolveIncludePath } from './lib/include-path.js';
 
 /**
  * Write file only if content has changed
@@ -131,21 +132,7 @@ class Build {
 		
 		return source.replace(includeRegex, (match, includePath) => {
 			try {
-				// Try different extensions like EJS does
-				const extensions = ['', '.ejs', '.html', '.md', '.js'];
-				let resolvedPath: string | null = null;
-				
-				for (const ext of extensions) {
-					const candidate = path.resolve(baseDir, includePath + ext);
-					if (fse.existsSync(candidate)) {
-						resolvedPath = candidate;
-						break;
-					}
-				}
-				
-				if (!resolvedPath) {
-					resolvedPath = path.resolve(baseDir, includePath);
-				}
+				const resolvedPath = resolveIncludePath(baseDir, this.config.site.srcPath, includePath);
 				
 				let content = fse.readFileSync(resolvedPath, 'utf8');
 				
@@ -158,7 +145,7 @@ class Build {
 				// This allows EJS variables in included files to be processed
 				return content;
 			} catch (err) {
-				throw new Error(`EJS include failed: "${includePath}" not found. Searched in: ${baseDir}`);
+				throw new Error(`EJS include failed: "${includePath}" not found. Searched relative to: ${baseDir} and site root: ${this.config.site.srcPath}`);
 			}
 		});
 	}
