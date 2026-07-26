@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 // scripts/cli.ts
-import * as path6 from "path";
-import fse5 from "fs-extra";
+import * as path7 from "path";
+import fse6 from "fs-extra";
 
 // scripts/page-builder.ts
 import fse3 from "fs-extra";
@@ -535,7 +535,8 @@ var watch2 = (config, onRebuild, buildOptions = {}) => {
 
 // scripts/lib/server.ts
 import * as http from "http";
-import handler from "serve-handler";
+import * as path6 from "path";
+import fse5 from "fs-extra";
 
 // scripts/lib/dev-reload.ts
 import * as path5 from "path";
@@ -631,6 +632,64 @@ var tryServeHtmlWithDevScript = async (config, req, res) => {
 };
 
 // scripts/lib/server.ts
+var CONTENT_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon",
+  ".txt": "text/plain; charset=utf-8",
+  ".xml": "application/xml; charset=utf-8"
+};
+var getContentType = (filePath) => {
+  return CONTENT_TYPES[path6.extname(filePath).toLowerCase()] ?? "application/octet-stream";
+};
+var normalizeRequestPath = (urlPath) => {
+  const decoded = decodeURIComponent(urlPath);
+  const normalized = path6.normalize(decoded).replace(/^\.{2,}(?:[/\\]|$)+/, "");
+  return normalized.replace(/^[/\\]+/, "");
+};
+var tryServeStaticFile = async (config, req, res) => {
+  const distPath = path6.resolve(config.site.distPath ?? "./public");
+  const requestUrl = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+  let filePath = path6.join(distPath, normalizeRequestPath(requestUrl.pathname));
+  const tryFile = async (candidate) => {
+    if (await fse5.pathExists(candidate)) {
+      const stats = await fse5.stat(candidate);
+      if (stats.isFile()) {
+        return candidate;
+      }
+    }
+    return null;
+  };
+  const candidates = [
+    filePath,
+    `${filePath}.html`,
+    path6.join(filePath, "index.html")
+  ];
+  for (const candidate of candidates) {
+    const actualPath = await tryFile(candidate);
+    if (actualPath) {
+      res.statusCode = 200;
+      res.setHeader("Content-Type", getContentType(actualPath));
+      res.setHeader("Cache-Control", "no-store");
+      const stream = fse5.createReadStream(actualPath);
+      stream.pipe(res);
+      stream.on("error", () => {
+        res.statusCode = 500;
+        res.end("Internal Server Error");
+      });
+      return true;
+    }
+  }
+  return false;
+};
 var serve = (config, port, getReloadVersion = () => 0) => {
   console.log(`Starting local server at http://localhost:${port}`);
   const server = http.createServer(async (req, res) => {
@@ -646,16 +705,13 @@ var serve = (config, port, getReloadVersion = () => 0) => {
     if (servedHtml) {
       return;
     }
-    await handler(req, res, {
-      public: config.site.distPath,
-      headers: [{
-        source: "**/*",
-        headers: [{
-          key: "Cache-Control",
-          value: "no-store"
-        }]
-      }]
-    });
+    const servedStatic = await tryServeStaticFile(config, req, res);
+    if (servedStatic) {
+      return;
+    }
+    res.statusCode = 404;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.end("Not Found");
   });
   server.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
@@ -686,9 +742,9 @@ var runNanogen = async (argv = process.argv.slice(2)) => {
     return;
   }
   const configFileName = pickConfigFile(argv);
-  const configFile = path6.resolve(configFileName);
+  const configFile = path7.resolve(configFileName);
   log(`Using configuration file: ${configFileName} resolved to: ${configFile}`);
-  if (!fse5.existsSync(configFile)) {
+  if (!fse6.existsSync(configFile)) {
     throw new Error(`The configuration file "${configFile}" is missing`);
   }
   const config = await loadConfig(configFile);

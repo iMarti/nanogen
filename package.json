@@ -20,8 +20,8 @@
   },
   "scripts": {
     "build": "node nanogen.js",
-    "compile": "esbuild scripts/cli.ts --bundle --platform=node --outfile=nanogen.js --format=esm --external:chokidar --external:ejs --external:fs-extra --external:glob --external:json5 --external:serve-handler --external:lodash --external:marked --external:urijs",
-    "serve": "serve ./public",
+    "compile": "esbuild scripts/cli.ts --bundle --platform=node --outfile=nanogen.js --format=esm --external:chokidar --external:ejs --external:fs-extra --external:glob --external:json5 --external:lodash --external:marked --external:urijs",
+    "serve": "node nanogen.js --serve",
     "prepare": "npm run compile"
   },
   "keywords": [
@@ -49,7 +49,6 @@
     "json5": "^2.2.3",
     "lodash": "^4.18.1",
     "marked": "^18.0.7",
-    "serve-handler": "^6.1.7",
     "urijs": "^1.19.11"
   },
   "devDependencies": {
@@ -58,9 +57,8 @@
     "@types/lodash": "^4.17.24",
     "@types/marked": "^6.0.0",
     "@types/node": "^20.0.0",
-    "@types/serve-handler": "^6.1.4",
     "@types/urijs": "^1.19.26",
     "esbuild": "^0.28.1",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   }
 }
