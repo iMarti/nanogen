@@ -27,6 +27,7 @@ class Page implements IPage {
 
 	public parsedPath: path.ParsedPath;
 	public url!: string;
+	public canonicalUrl!: string;
 	public externalLink: boolean = false;
 
 	/**
@@ -42,6 +43,7 @@ class Page implements IPage {
 
 		if (!this.externalLink) {
 			this.url = this.buildUrl(config.site);
+			this.canonicalUrl = this.buildCanonicalUrl(config);
 		}
 
 		Page.pages.all.push(this);
@@ -114,6 +116,13 @@ class Page implements IPage {
 		const relativeUrl = this.buildRelativeUrl(siteConfig);
 		const url = (siteConfig.rootUrl == '/' && relativeUrl == '/') ? '/' : siteConfig.rootUrl + relativeUrl;
 		return url;
+	}
+	private buildCanonicalUrl(config: IConfig): string {
+		if (config.sitemap?.domain) {
+			return new URL(this.url, config.sitemap.domain).href;
+		}
+
+		return this.url;
 	}
 	private buildRelativeUrl(siteConfig: ISiteConfig): string {
 		if (this.isIndex) {

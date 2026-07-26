@@ -43,6 +43,7 @@ export interface IPage extends IPageMeta {
 	siblings: IPage[];
 	ancestors: IPage[];
 	url: string;
+	canonicalUrl?: string;
 	isPublished(): boolean;
 }
 
@@ -66,6 +67,7 @@ export declare class Page implements IPage {
 	ancestors: IPage[];
 	parsedPath: import('path').ParsedPath;
 	url: string;
+	canonicalUrl: string;
 	externalLink: boolean;
 
 	constructor(pathname: string, config: IConfig);

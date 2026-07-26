@@ -69,6 +69,7 @@ interface IPage extends IPageMeta {
 	isPublished: () => boolean;
 
 	url: string;
+	canonicalUrl?: string;
 }
 
 export { IPage, IPageMeta, ISiteConfig, ISitemapConfig, IConfig, IBuildOptions }

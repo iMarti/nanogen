@@ -26,6 +26,7 @@ var Page = class _Page {
     this.applyMeta(config.pageMetaDefault);
     if (!this.externalLink) {
       this.url = this.buildUrl(config.site);
+      this.canonicalUrl = this.buildCanonicalUrl(config);
     }
     _Page.pages.all.push(this);
   }
@@ -88,6 +89,12 @@ var Page = class _Page {
     const relativeUrl = this.buildRelativeUrl(siteConfig);
     const url = siteConfig.rootUrl == "/" && relativeUrl == "/" ? "/" : siteConfig.rootUrl + relativeUrl;
     return url;
+  }
+  buildCanonicalUrl(config) {
+    if (config.sitemap?.domain) {
+      return new URL(this.url, config.sitemap.domain).href;
+    }
+    return this.url;
   }
   buildRelativeUrl(siteConfig) {
     if (this.isIndex) {
