@@ -119,7 +119,7 @@ var Page = class _Page {
 
 // scripts/page-builder.ts
 import * as glob2 from "glob";
-import * as ejs from "ejs";
+import ejs from "ejs";
 import { marked } from "marked";
 import lodash2 from "lodash";
 import json5 from "json5";

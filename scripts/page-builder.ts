@@ -4,7 +4,7 @@ import * as path from 'path';
 import { Page } from './page.js';
 import type { IBuildOptions, IConfig } from './interfaces.js';
 import * as glob from 'glob';
-import * as ejs from 'ejs';
+import ejs from 'ejs';
 import { marked } from 'marked';
 import lodash from 'lodash';
 import json5 from 'json5';
